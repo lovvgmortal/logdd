@@ -25,6 +25,10 @@ const SidebarItem = ({ icon, label, active, onClick }: { icon: React.ReactNode, 
 export const Sidebar: React.FC<SidebarProps> = ({ currentRoute, onNavigate, onLogout, userEmail, openRouterKey }) => {
   const [credits, setCredits] = useState<CreditUsage | null>(null);
   const isPricing = (currentRoute as string) === '/home/pricing';
+  const scale = 5;
+  const usageDisplay = credits ? (credits.usage || 0) * scale : 0;
+  const limitDisplay = credits && credits.limit != null ? credits.limit * scale : null;
+  const progressPercent = credits && credits.limit ? Math.min((credits.usage / credits.limit) * 100, 100) : 0;
 
   // Tự động check credits khi có Key
   useEffect(() => {
@@ -73,19 +77,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentRoute, onNavigate, onLo
                 <div className="bg-zinc-900/50 rounded-xl p-3 border border-white/5">
                    <div className="flex items-center justify-between mb-2">
                       <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">AI Usage</span>
-                      <span className="text-xs font-mono font-bold text-white">${credits.usage?.toFixed(3) || '0.000'}</span>
+                      <span className="text-xs font-mono font-bold text-white">${usageDisplay.toFixed(3)}</span>
                    </div>
                    {credits.limit && (
                        <div className="w-full h-1 bg-black rounded-full overflow-hidden mb-1">
                            <div 
                                 className="h-full bg-gradient-to-r from-blue-600 to-purple-600" 
-                                style={{ width: `${Math.min((credits.usage / credits.limit) * 100, 100)}%` }}
+                                style={{ width: `${progressPercent}%` }}
                            ></div>
                        </div>
                    )}
                    {credits.limit && (
                        <div className="text-right text-[9px] text-zinc-600">
-                           Limit: ${credits.limit}
+                           Limit: ${limitDisplay}
                        </div>
                    )}
                 </div>
