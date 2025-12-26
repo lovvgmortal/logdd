@@ -159,19 +159,20 @@ export const CreationDashboard: React.FC<CreationDashboardProps> = ({ project, o
 
   const handleUpdateSection = (sectionId: string, updates: Partial<BlueprintSection>) => {
     if (!data.blueprint) return;
-    const updatedSections = data.blueprint.sections.map(s => s.id === sectionId ? { ...s, ...updates } : s);
+    const sections = data.blueprint.sections || [];
+    const updatedSections = sections.map(s => s.id === sectionId ? { ...s, ...updates } : s);
     handleBlueprintChange({ blueprint: { ...data.blueprint, sections: updatedSections } });
   };
 
   const handleUpdateResultSection = (id: string, newContent: string) => {
-    if (!data.result) return;
+    if (!data.result || !data.result.rewritten.script_sections) return;
     const updatedSections = data.result.rewritten.script_sections.map(s => s.id === id ? { ...s, content: newContent } : s);
     updateData({ result: { ...data.result, rewritten: { ...data.result.rewritten, script_sections: updatedSections } } });
   };
 
   const handleRefineResultSection = async (id: string, instruction: string) => {
     if (!data.result || !checkKeys()) return;
-    const section = data.result.rewritten.script_sections.find(s => s.id === id);
+    const section = (data.result.rewritten.script_sections || []).find(s => s.id === id);
     if (!section) return;
     setIsProcessing(true);
     try {
