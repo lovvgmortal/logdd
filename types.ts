@@ -28,6 +28,7 @@ export interface ScriptDNA {
   id: string;
   name: string;
   source_urls?: string[]; // Updated to array
+  user_notes?: string; // NEW: Manual user constraints/notes
   analysis: {
     pacing: string; // e.g. "Fast-paced, cut every 3s"
     tone: string; // e.g. "Sarcastic, Educational"
@@ -42,7 +43,7 @@ export interface ScriptDNA {
       confusion_points: string[]; // "I don't get it", "Too fast"
       objections: string[]; // "I disagree", "This is wrong"
     };
-    contrastive_insight: string; // The "Gap" between Viral vs Flop
+    contrastive_insight: string; // The "Gap" Theory
     // ----------------------------------
 
     linguistic_style: string;
@@ -98,24 +99,6 @@ export interface ScriptBlueprint {
   critique: string;
 }
 
-export interface ScriptSection {
-  id: string;
-  title: string;
-  content: string;
-  type: string;
-}
-
-export interface OptimizedResult {
-  blueprint: ScriptBlueprint; 
-  rewritten: {
-    title: string;
-    description: string;
-    tags: string;
-    script_sections: ScriptSection[];
-    explanation_of_changes: string;
-  };
-}
-
 // --- NEW: SCORING TYPES ---
 export interface ScoringCriterion {
   id: string;
@@ -141,8 +124,28 @@ export interface ScoringResult {
   breakdown: ScoreItem[];
   overall_feedback: string;
   timestamp: number;
+  source_info?: string; // NEW: Tracks "DNA: [Name]" or "Rule: [Name]"
 }
 // --------------------------
+
+export interface ScriptSection {
+  id: string;
+  title: string;
+  content: string;
+  type: string;
+  scoringResult?: ScoringResult; // NEW: Store score per section
+}
+
+export interface OptimizedResult {
+  blueprint: ScriptBlueprint; 
+  rewritten: {
+    title: string;
+    description: string;
+    tags: string;
+    script_sections: ScriptSection[];
+    explanation_of_changes: string;
+  };
+}
 
 // --- NEW: VERSION HISTORY ---
 export interface VersionedItem<T> {
@@ -183,6 +186,7 @@ export interface Project {
     selectedModel?: string;
 
     scoringTemplates: ScoringTemplate[]; 
+    selectedScoringTemplateId?: string; // NEW: Track active template for generation
     lastScore?: ScoringResult; 
     
     blueprint: ScriptBlueprint | null;

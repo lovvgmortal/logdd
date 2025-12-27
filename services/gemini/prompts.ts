@@ -14,26 +14,27 @@ OBJECTIVE: Reverse-engineer the "Genetic Code" (DNA) of high-performing content 
 YOUR METHODOLOGY (UPGRADED):
 
 1. CONTRASTIVE ANALYSIS (The "Gap" Theory):
-   - Do NOT just analyze Virals. You must compare "Viral A" vs "Flop B".
-   - Find the Variable: If both talk about the same topic, why did one fail? (e.g., "Viral used a 3-second hook, Flop used a 15-second intro").
+   - Compare "Viral A" vs "Flop B".
    - Isolate the "Content Gap": What strictly exists in the Viral set that is absent in the Flop set?
 
-2. SENTIMENT CLUSTERING (Audience Forensics):
-   - Analyze the provided comments deeply. Group them into 3 clusters:
-     A. HIGH DOPAMINE: "Goosebumps", "I cried", "Best part was X". (These are retention spikes).
-     B. CONFUSION: "I don't understand", "What did you mean?", "Too fast". (These are retention dips).
-     C. OBJECTION: "I disagree", "This is wrong", "Fake". (These are engagement triggers or credibility killers).
+2. GRANULAR PACING (Time-Based Analysis):
+   - DO NOT summarize (e.g., "Fast paced").
+   - DO quantify (e.g., "Cut every 3-5 seconds", "Hook lasts exactly 8 seconds", "Climax occurs at 75% mark").
+   - Identify FREQUENCY of dopamine hits.
 
-3. SYNTHESIS: Create a reusable template (DNA) that captures these precise rules.
+3. SENTIMENT CLUSTERING:
+   - Group audience feedback into: High Dopamine (Keep), Confusion (Fix), Objection (Address).
+
+4. SYNTHESIS: Create a reusable template (DNA) that captures these precise rules.
 `;
 
 export const DNA_REFINEMENT_SYSTEM_PROMPT = `
 ROLE: You are an Advanced AI Model Trainer.
-OBJECTIVE: You are given an EXISTING "Script DNA" (a pattern template) and NEW training data (Virals/Flops).
-TASK: EVOLVE the DNA. Do not simply overwrite it. 
-1. CONFIRM: If new data matches existing patterns, strengthen the confidence of those rules.
+OBJECTIVE: You are given an EXISTING "Script DNA" and NEW training data.
+TASK: EVOLVE the DNA. 
+1. CONFIRM: If new data matches existing patterns, strengthen the confidence.
 2. CORRECT: If new data contradicts old rules, update the rules to be more accurate.
-3. EXPAND: Add NEW viral triggers or retention tactics found in the new data that were missing in the old DNA.
+3. GRANULARIZE: Turn vague descriptions into specific timing rules (e.g. change "Fast" to "Cuts every 2s").
 `;
 
 export const constructDnaPrompt = (viralsText: string, flopsText: string) => `
@@ -48,10 +49,11 @@ ${flopsText}
 TASK:
 Extract a robust Script DNA Template.
 
-SPECIFIC INSTRUCTIONS FOR INTELLIGENCE LAYERS:
-1. Compare Dataset A vs B. Identify the exact "Contrastive Insight". Why did A succeed where B failed?
-2. Cluster the comments in Dataset A. What specifically caused "High Dopamine" (Keep this) vs "Confusion" (Fix this)?
-3. Construct the "structure_skeleton" based only on the high-performing segments of Dataset A.
+SPECIFIC INSTRUCTIONS:
+1. "pacing": Provide technical editing rules. Mention seconds, cut frequency, and energy shifts.
+2. "structure_skeleton": List the logical flow in sequence. Use [Timebox] if possible (e.g. "[0-15s] The Hook").
+3. "viral_triggers": What specifically causes the high engagement? (Visuals? Sound effects? Controversy?)
+4. "audience_sentiment": Categorize the comments deeply.
 `;
 
 export const constructDnaRefinementPrompt = (existingDnaJson: string, viralsText: string, flopsText: string) => `
@@ -65,11 +67,10 @@ ${viralsText}
 ${flopsText}
 
 TASK:
-Refine and Evolve the Base DNA Profile using the New Data.
-- Keep the DNA Name and general identity.
-- UPDATE "pacing" and "tone" if the new data suggests a shift.
-- APPEND new findings to "viral_triggers", "retention_tactics", and "structure_skeleton".
-- PRESERVE what was already working if the new data supports it.
+Refine and Evolve the Base DNA Profile.
+- PUSH FOR SPECIFICITY: If the base DNA says "Engaging intro", change it to "Intro must ask a question in the first 5 seconds".
+- UPDATE "pacing" with specific timing data observed in new virals.
+- APPEND new findings to "viral_triggers".
 `;
 
 // --- 2. BLUEPRINT GENERATION PROMPTS ---

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './services/supabaseClient'; 
 import { Session } from '@supabase/supabase-js';
-import { Project, Folder, Note, ScriptDNA, RoutePath, UserSettings } from './types';
+import { Project, Folder, Note, ScriptDNA, RoutePath, UserSettings, ScoringTemplate } from './types';
 import { Sidebar } from './components/Layout/Sidebar';
 import { Footer } from './components/Layout/Footer';
 import { LandingView, LandingNavbar } from './components/Landing/LandingView';
@@ -24,6 +24,9 @@ export default function App() {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [dnas, setDnas] = useState<ScriptDNA[]>([]);
+  // NEW: Global Scoring Templates
+  const [scoringTemplates, setScoringTemplates] = useState<ScoringTemplate[]>([]);
+  
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
 
   // Settings State
@@ -56,6 +59,7 @@ export default function App() {
         setFolders([]);
         setNotes([]);
         setDnas([]);
+        setScoringTemplates([]);
         setLoading(false);
       } else {
       }
@@ -71,22 +75,23 @@ export default function App() {
           const { data: settings } = await supabase.from('user_settings').select('*').eq('user_id', userId).single();
           setUserSettings(settings || { openrouter_key: '', youtube_key: '' });
 
-          // 2. Load Core Data in Parallel
-          const [projRes, foldRes, noteRes, dnaRes] = await Promise.all([
+          // 2. Load Core Data in Parallel (Added scoring_templates)
+          const [projRes, foldRes, noteRes, dnaRes, scoreRes] = await Promise.all([
               supabase.from('projects').select('*').eq('user_id', userId).order('updated_at', { ascending: false }),
               supabase.from('folders').select('*').eq('user_id', userId).order('created_at', { ascending: true }),
               supabase.from('notes').select('*').eq('user_id', userId).order('updated_at', { ascending: false }),
-              supabase.from('dnas').select('*').eq('user_id', userId).order('created_at', { ascending: false })
+              supabase.from('dnas').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
+              supabase.from('scoring_templates').select('*').eq('user_id', userId).order('created_at', { ascending: false })
           ]);
 
           // Map Database Columns (snake_case) to App Types (camelCase)
           if (projRes.data) {
               setProjects(projRes.data.map((p: any) => ({
                   id: p.id,
-                  folderId: p.folder_id, // Map folder_id -> folderId
+                  folderId: p.folder_id, 
                   name: p.name,
-                  updatedAt: p.updated_at, // Map updated_at -> updatedAt
-                  data: p.data // JSONB column
+                  updatedAt: p.updated_at,
+                  data: p.data 
               })));
           }
 
@@ -114,6 +119,14 @@ export default function App() {
                   source_urls: d.source_urls,
                   analysis: d.analysis,
                   raw_transcript_summary: d.raw_transcript_summary
+              })));
+          }
+          
+          if (scoreRes.data) {
+              setScoringTemplates(scoreRes.data.map((s: any) => ({
+                  id: s.id,
+                  name: s.name,
+                  criteria: s.criteria
               })));
           }
 
@@ -165,7 +178,9 @@ export default function App() {
           updated_at: updatedProject.updatedAt,
           data: updatedProject.data
       });
-      if (error) console.error("Update project error:", error);
+      if (error) {
+         console.error("Update project error:", JSON.stringify(error, null, 2));
+      }
   };
 
   const createNewProject = async (folderId?: string) => {
@@ -186,11 +201,10 @@ export default function App() {
               result: null, 
               step: 'input', 
               availableDNAs: [], 
-              scoringTemplates: [] 
+              scoringTemplates: [] // Legacy field kept empty
           } 
       };
       
-      // Update UI & DB
       await handleUpdateProject(newProject);
       setActiveProjectId(newProject.id); 
       navigate('/home/creating');
@@ -198,10 +212,8 @@ export default function App() {
 
   const handleDeleteProject = async (e: React.MouseEvent, id: string) => { 
       e.stopPropagation(); 
-      // Optimistic
       setProjects(prev => prev.filter(p => p.id !== id));
       if (activeProjectId === id) setActiveProjectId(null);
-
       if (!session) return;
       await supabase.from('projects').delete().eq('id', id).eq('user_id', session.user.id);
   };
@@ -223,96 +235,71 @@ export default function App() {
   const handleCreateFolder = async (name: string) => { 
       if (!session) return;
       const newFolderId = `folder-${Date.now()}`;
-      const newFolder = { id: newFolderId, name };
-      
-      setFolders(prev => [...prev, newFolder]);
-      
-      await supabase.from('folders').insert({
-          id: newFolderId,
-          user_id: session.user.id,
-          name: name
-      });
+      setFolders(prev => [...prev, { id: newFolderId, name }]);
+      await supabase.from('folders').insert({ id: newFolderId, user_id: session.user.id, name: name });
   };
 
-  // --- NOTE HANDLERS (Supabase) ---
-
+  // --- NOTE HANDLERS ---
   const handleUpdateNote = async (id: string, updates: Partial<Note>) => { 
       const note = notes.find(n => n.id === id);
       if (!note || !session) return;
-      
       const updatedNote = { ...note, ...updates, updatedAt: Date.now() };
-      
-      // Optimistic
       setNotes(prev => prev.map(n => n.id === id ? updatedNote : n));
-
-      await supabase.from('notes').upsert({
-          id: updatedNote.id,
-          user_id: session.user.id,
-          title: updatedNote.title,
-          content: updatedNote.content,
-          color: updatedNote.color,
-          updated_at: updatedNote.updatedAt
-      });
+      await supabase.from('notes').upsert({ id: updatedNote.id, user_id: session.user.id, title: updatedNote.title, content: updatedNote.content, color: updatedNote.color, updated_at: updatedNote.updatedAt });
   };
-
   const handleCreateNote = async () => { 
       if (!session) return;
       const newNote: Note = { id: `note-${Date.now()}`, title: '', content: '', updatedAt: Date.now(), color: 'yellow' };
-      
       setNotes(prev => [newNote, ...prev]);
-
-      await supabase.from('notes').insert({
-          id: newNote.id,
-          user_id: session.user.id,
-          title: '',
-          content: '',
-          color: 'yellow',
-          updated_at: newNote.updatedAt
-      });
+      await supabase.from('notes').insert({ id: newNote.id, user_id: session.user.id, title: '', content: '', color: 'yellow', updated_at: newNote.updatedAt });
   };
-
   const handleDeleteNote = async (id: string) => { 
       if (!session) return;
       setNotes(prev => prev.filter(n => n.id !== id));
       await supabase.from('notes').delete().eq('id', id).eq('user_id', session.user.id);
   };
 
-  // --- DNA HANDLERS (Supabase) ---
-
+  // --- DNA HANDLERS ---
   const handleSaveDNA = async (dna: ScriptDNA) => { 
       if (!session) return;
-      // Optimistic
       setDnas(prev => [dna, ...prev]);
-
-      await supabase.from('dnas').insert({
-          id: dna.id,
-          user_id: session.user.id,
-          name: dna.name,
-          source_urls: dna.source_urls,
-          analysis: dna.analysis,
-          raw_transcript_summary: dna.raw_transcript_summary
-      });
+      await supabase.from('dnas').insert({ id: dna.id, user_id: session.user.id, name: dna.name, source_urls: dna.source_urls, analysis: dna.analysis, raw_transcript_summary: dna.raw_transcript_summary });
   };
-
   const handleUpdateDNA = async (dna: ScriptDNA) => { 
       if (!session) return;
-      // Optimistic
       setDnas(prev => prev.map(d => d.id === dna.id ? dna : d));
-
-      await supabase.from('dnas').upsert({
-          id: dna.id,
-          user_id: session.user.id,
-          name: dna.name,
-          source_urls: dna.source_urls,
-          analysis: dna.analysis,
-          raw_transcript_summary: dna.raw_transcript_summary
-      });
+      await supabase.from('dnas').upsert({ id: dna.id, user_id: session.user.id, name: dna.name, source_urls: dna.source_urls, analysis: dna.analysis, raw_transcript_summary: dna.raw_transcript_summary });
   };
-
   const handleDeleteDNA = async (id: string) => { 
       if (!session) return;
       setDnas(prev => prev.filter(d => d.id !== id));
       await supabase.from('dnas').delete().eq('id', id).eq('user_id', session.user.id);
+  };
+
+  // --- NEW: GLOBAL SCORING TEMPLATE HANDLERS ---
+  const handleSaveTemplate = async (template: ScoringTemplate) => {
+      if (!session) return;
+      // Optimistic check: Update if exists, Add if new
+      const exists = scoringTemplates.some(t => t.id === template.id);
+      
+      if (exists) {
+          setScoringTemplates(prev => prev.map(t => t.id === template.id ? template : t));
+      } else {
+          setScoringTemplates(prev => [template, ...prev]);
+      }
+
+      await supabase.from('scoring_templates').upsert({
+          id: template.id,
+          user_id: session.user.id,
+          name: template.name,
+          criteria: template.criteria
+      });
+  };
+
+  const handleDeleteTemplate = async (id: string) => {
+      if (!session) return;
+      setScoringTemplates(prev => prev.filter(t => t.id !== id));
+      await supabase.from('scoring_templates').delete().eq('id', id).eq('user_id', session.user.id);
   };
 
   const navigate = (path: RoutePath) => { setCurrentRoute(path); window.scrollTo({ top: 0, behavior: 'smooth' }); };
@@ -345,8 +332,8 @@ export default function App() {
         userEmail={session.user.email}
         openRouterKey={userSettings?.openrouter_key}
       />
-      <main className="flex-1 ml-64 p-8 overflow-y-auto min-h-screen">
-        <div className="max-w-6xl mx-auto">
+      <main className="flex-1 ml-64 p-6 overflow-y-auto min-h-screen">
+        <div className="w-full max-w-[98%] mx-auto">
           {currentRoute === '/home/dashboard' && (
              <DashboardView projects={projects} folders={folders} onOpenProject={(id) => { setActiveProjectId(id); navigate('/home/creating'); }} onNewProject={createNewProject} onDeleteProject={handleDeleteProject} onRenameProject={handleRenameProject} onCreateFolder={handleCreateFolder} onMoveProject={handleMoveProject} />
           )}
@@ -356,6 +343,10 @@ export default function App() {
                 project={projects.find(p => p.id === activeProjectId)}
                 onUpdateProject={handleUpdateProject}
                 globalDNAs={dnas}
+                // PASSING GLOBAL TEMPLATES
+                globalScoringTemplates={scoringTemplates} 
+                onSaveGlobalTemplate={handleSaveTemplate}
+                onDeleteGlobalTemplate={handleDeleteTemplate}
                 userSettings={userSettings}
             />
           )}

@@ -15,12 +15,16 @@ export const analyzeScriptScore = async (
 ): Promise<ScoringResult> => {
 
   let criteriaContext = "";
+  let sourceInfo = "";
+
   if (mode === 'dna') {
     if (!dna) throw new Error("No DNA provided.");
     criteriaContext = `COMPARE AGAINST DNA:\nTone: ${dna.analysis.tone}\nPacing: ${dna.analysis.pacing}`;
+    sourceInfo = `DNA: ${dna.name}`;
   } else {
     if (!customTemplate) throw new Error("No criteria provided.");
     criteriaContext = `EVALUATE AGAINST:\n${customTemplate.criteria.map((c, i) => `${i+1}. ${c.name}: ${c.description}`).join('\n')}`;
+    sourceInfo = `Rule: ${customTemplate.name}`;
   }
 
   const prompt = constructScoringPrompt(fullScript, criteriaContext) + getLanguageInstruction(language);
@@ -33,5 +37,6 @@ export const analyzeScriptScore = async (
 
   const responseText = await generateContentViaOpenRouter(GEMINI_MODEL, systemPrompt, prompt, apiKey, true);
   const parsed = JSON.parse(responseText || "{}");
-  return { ...parsed, timestamp: Date.now() };
+  
+  return { ...parsed, timestamp: Date.now(), source_info: sourceInfo };
 };

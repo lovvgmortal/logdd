@@ -5,41 +5,30 @@ import { GEMINI_MODEL } from "../../constants";
 import { DNA_SYSTEM_PROMPT, DNA_REFINEMENT_SYSTEM_PROMPT, constructDnaPrompt, constructDnaRefinementPrompt, getLanguageInstruction } from "./prompts";
 import { generateContentViaOpenRouter } from "../openRouterService";
 
-const getDnaSchema = (): Schema => ({
-  type: Type.OBJECT,
-  properties: {
-    name: { type: Type.STRING },
+// Simplified Template for DNA to prevent Schema Hallucination
+const dnaTemplate = {
+    name: "Pattern Name",
     analysis: {
-      type: Type.OBJECT,
-      properties: {
-        pacing: { type: Type.STRING },
-        tone: { type: Type.STRING },
-        structure_skeleton: { type: Type.ARRAY, items: { type: Type.STRING } },
-        hook_technique: { type: Type.STRING },
-        retention_tactics: { type: Type.ARRAY, items: { type: Type.STRING } },
-        audience_psychology: { type: Type.STRING },
+        pacing: "Description",
+        tone: "Description",
+        structure_skeleton: ["Hook", "Intro", "Body", "Payoff"],
+        hook_technique: "Description",
+        retention_tactics: ["Tactic 1", "Tactic 2"],
+        audience_psychology: "Description",
         audience_sentiment: {
-            type: Type.OBJECT,
-            properties: {
-                high_dopamine_triggers: { type: Type.ARRAY, items: { type: Type.STRING } },
-                confusion_points: { type: Type.ARRAY, items: { type: Type.STRING } },
-                objections: { type: Type.ARRAY, items: { type: Type.STRING } }
-            },
-            required: ["high_dopamine_triggers", "confusion_points", "objections"]
+            high_dopamine_triggers: ["Trigger 1"],
+            confusion_points: ["Point 1"],
+            objections: ["Objection 1"]
         },
-        contrastive_insight: { type: Type.STRING },
-        linguistic_style: { type: Type.STRING },
-        successful_patterns: { type: Type.ARRAY, items: { type: Type.STRING } },
-        content_gaps: { type: Type.ARRAY, items: { type: Type.STRING } },
-        viral_triggers: { type: Type.ARRAY, items: { type: Type.STRING } },
-        flop_reasons: { type: Type.ARRAY, items: { type: Type.STRING } }
-      },
-      required: ["pacing", "tone", "structure_skeleton", "hook_technique", "audience_psychology", "audience_sentiment", "contrastive_insight", "linguistic_style", "successful_patterns", "viral_triggers", "flop_reasons"]
+        contrastive_insight: "Insight",
+        linguistic_style: "Description",
+        successful_patterns: ["Pattern 1"],
+        content_gaps: ["Gap 1"],
+        viral_triggers: ["Trigger 1"],
+        flop_reasons: ["Reason 1"]
     },
-    raw_transcript_summary: { type: Type.STRING }
-  },
-  required: ["name", "analysis", "raw_transcript_summary"]
-});
+    raw_transcript_summary: "Summary"
+};
 
 export const extractScriptDNA = async (
   virals: ContentPiece[],
@@ -52,13 +41,24 @@ export const extractScriptDNA = async (
   const viralsText = formatContentForPrompt(virals, "VIRAL");
   const flopsText = formatContentForPrompt(flops, "FLOP");
 
+  // DEBUG LOGGING
+  console.log("--- DEBUG DNA INPUT ---");
+  console.log(`Virals Count: ${virals.length}, Total Char Length: ${viralsText.length}`);
+  console.log(`Flops Count: ${flops.length}, Total Char Length: ${flopsText.length}`);
+  if (viralsText.length < 500) console.warn("WARNING: Viral content is suspiciously short!");
+
   let finalPrompt = customPrompt && customPrompt.trim() 
       ? `INPUT DATA STREAMS:\n=== DATASET A: VIRAL HITS ===\n${viralsText}\n=== DATASET B: FLOPS ===\n${flopsText}\nUSER CUSTOM INSTRUCTIONS:\n${customPrompt}\nTASK: Perform analysis and output strictly in JSON.`
       : constructDnaPrompt(viralsText, flopsText);
   
   finalPrompt += getLanguageInstruction(language);
+  finalPrompt += "\n\nREMINDER: OUTPUT PURE JSON ONLY. NO MARKDOWN. START WITH '{'.";
 
-  const systemPrompt = `${DNA_SYSTEM_PROMPT}\nCRITICAL OUTPUT RULE: You MUST return valid JSON matching the schema. SCHEMA:\n${JSON.stringify(getDnaSchema(), null, 2)}`;
+  const systemPrompt = `${DNA_SYSTEM_PROMPT}
+  \nCRITICAL OUTPUT RULE: You MUST return valid JSON matching the template below. 
+  - Do NOT output schema definitions. 
+  - Output the FILLED data object.
+  \nTEMPLATE:\n${JSON.stringify(dnaTemplate, null, 2)}`;
 
   const responseText = await generateContentViaOpenRouter(GEMINI_MODEL, systemPrompt, finalPrompt, apiKey, true);
 
@@ -78,13 +78,22 @@ export const refineScriptDNA = async (
   const flopsText = formatContentForPrompt(newFlops, "NEW FLOP");
   const existingDnaJson = JSON.stringify(parentDNA.analysis, null, 2);
 
+  // DEBUG LOGGING
+  console.log("--- DEBUG DNA REFINE INPUT ---");
+  console.log(`New Virals Length: ${viralsText.length}`);
+
   let finalPrompt = customPrompt && customPrompt.trim()
       ? `BASE DNA: ${existingDnaJson}\nNEW VIRALS: ${viralsText}\nNEW FLOPS: ${flopsText}\nUSER INSTRUCTIONS: ${customPrompt}`
       : constructDnaRefinementPrompt(existingDnaJson, viralsText, flopsText);
 
   finalPrompt += getLanguageInstruction(language);
+  finalPrompt += "\n\nREMINDER: OUTPUT PURE JSON ONLY. NO MARKDOWN. START WITH '{'.";
 
-  const systemPrompt = `${DNA_REFINEMENT_SYSTEM_PROMPT}\nCRITICAL OUTPUT RULE: You MUST return valid JSON matching the schema. SCHEMA:\n${JSON.stringify(getDnaSchema(), null, 2)}`;
+  const systemPrompt = `${DNA_REFINEMENT_SYSTEM_PROMPT}
+  \nCRITICAL OUTPUT RULE: You MUST return valid JSON matching the template below.
+  - Do NOT output schema definitions. 
+  - Output the FILLED data object.
+  \nTEMPLATE:\n${JSON.stringify(dnaTemplate, null, 2)}`;
 
   const responseText = await generateContentViaOpenRouter(GEMINI_MODEL, systemPrompt, finalPrompt, apiKey, true);
 
@@ -95,11 +104,18 @@ export const refineScriptDNA = async (
 };
 
 const formatContentForPrompt = (pieces: ContentPiece[], label: string) => {
-  return pieces.map((v, i) => `[${label} #${i+1}]\nTitle: ${v.title}\nTranscript: ${v.script.substring(0, 8000)}\nFeedback: ${v.comments || "N/A"}`).join("\n\n");
+  return pieces.map((v, i) => `[${label} #${i+1}]\nTitle: ${v.title}\nTranscript: ${v.script}\nFeedback: ${v.comments || "N/A"}`).join("\n\n");
 }
 
 const parseDnaResponse = (responseText: string, sources: ContentPiece[]): ScriptDNA => {
   let parsed;
-  try { parsed = JSON.parse(responseText || "{}"); } catch (e) { throw new Error("Failed to parse AI response."); }
+  try { 
+      parsed = JSON.parse(responseText || "{}"); 
+      // Basic unwrapping if needed
+      if (parsed.dna) parsed = parsed.dna;
+  } catch (e) { 
+      console.error("DNA Parse Error", responseText);
+      throw new Error("Failed to parse AI response."); 
+  }
   return { id: `dna-${Date.now()}`, source_urls: sources.map(v => v.url || "").filter(Boolean), ...parsed };
 }
