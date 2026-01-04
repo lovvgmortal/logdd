@@ -1,0 +1,921 @@
+import { callOpenRouter, extractJsonFromResponse, ChatMessage } from "./openrouter";
+
+export interface GenerateScriptParams {
+  topic: string;
+  keyPoints?: string;
+  uniqueAngle?: string;
+  mode?: string;
+  persona?: any;
+  dna?: any;
+  customPrompt?: string;
+  language?: string;
+  targetWordCount?: number;
+  allowStructureInnovation?: boolean;
+}
+
+export interface OutlineSection {
+  title: string;
+  wordCount: number;
+  content: string;
+  notes?: string;
+}
+
+// Updated: Outline now has ONLY sections array, no separate hook/callToAction
+// Sections follow DNA structuralSkeleton 1:1
+export interface GeneratedOutline {
+  sections: OutlineSection[];
+  totalWordCount: number;
+}
+
+export interface ScoreResult {
+  score: number;
+  breakdown: {
+    hook: number;
+    structure: number;
+    engagement: number;
+    clarity: number;
+    callToAction: number;
+  };
+  strengths: string[];
+  improvements: string[];
+  suggestions: string[];
+}
+
+// Updated: Generate outline sections based on DNA skeleton
+const GENERATE_OUTLINE_PROMPT = `You are an expert viral content strategist. Create a script outline that follows the provided DNA structure EXACTLY.
+
+CRITICAL: 
+- The number of sections in the outline MUST match the DNA skeleton exactly.
+- Each section title and word count should match the DNA skeleton.
+- Do NOT add separate "Hook" or "CTA" sections - the DNA already defines where hooks and CTAs should be.
+
+Respond in JSON format:
+{
+  "sections": [
+    {
+      "title": "Section name from DNA",
+      "wordCount": 0,
+      "content": "What to cover in this section",
+      "notes": "Optional notes"
+    }
+  ],
+  "totalWordCount": 0
+}`;
+
+const GENERATE_SCRIPT_PROMPT = `You are an expert viral content scriptwriter. Your job is to create compelling, engaging, and HIGH-QUALITY scripts.
+
+Based on the provided outline, write a COMPLETE script.
+Rules:
+1. Follow the outline structure exactly - each section in outline = one section in script.
+2. Content must be DETAILED, insightful, and valuable (not generic or superficial).
+3. Use a natural, conversational, and engaging tone appropriate for the audience.
+4. Focus PURELY on the spoken voiceover (DO NOT include [VISUAL] cues or scene descriptions).
+5. SEPARATE sections strictly with the delimiter: |||SECTION|||
+
+⚠️ TTS-OPTIMIZED OUTPUT (CRITICAL):
+- NO markdown symbols: no *, #, **, _, ~, \`, etc.
+- NO section titles or headers in the output
+- NO film/video directions: no [B-roll], [Cut to], [VISUAL], (pause), etc.
+- NO parenthetical notes or brackets of any kind
+- ONLY clean, speakable text that can be read aloud naturally
+- Write as if you are speaking directly to the audience
+
+Format:
+[Section 1 Content - clean text only]
+|||SECTION|||
+[Section 2 Content - clean text only]
+|||SECTION|||
+[Section 3 Content - clean text only]
+...
+(One section for each outline section)`;
+
+const SCORE_SCRIPT_PROMPT = `You are an expert content analyst. Score this script on viral potential.
+
+Evaluate and score (0-100) these aspects:
+1. Hook strength (first 3 seconds)
+2. Structure and flow
+3. Engagement and retention tactics
+4. Clarity and messaging
+5. Call-to-action effectiveness
+
+Respond in JSON:
+{
+  "score": overall_score_0_to_100,
+  "breakdown": {
+    "hook": 0-100,
+    "structure": 0-100,
+    "engagement": 0-100,
+    "clarity": 0-100,
+    "callToAction": 0-100
+  },
+  "strengths": ["strength 1", "strength 2"],
+  "improvements": ["improvement 1", "improvement 2"],
+  "suggestions": ["actionable suggestion 1", "actionable suggestion 2"]
+}`;
+
+// Step 2: Generate Outline from inputs
+export const generateOutline = async (
+  params: GenerateScriptParams,
+  apiKey: string,
+  model: string = "google/gemini-3-flash-preview"
+): Promise<GeneratedOutline> => {
+  if (!apiKey) {
+    throw new Error("OpenRouter API Key chưa được cấu hình. Vui lòng nhập key vào Settings.");
+  }
+
+  if (!params.topic) {
+    throw new Error("Topic là bắt buộc");
+  }
+
+  let systemPrompt = GENERATE_OUTLINE_PROMPT;
+
+  // Add scaling and structure instructions
+  if (params.targetWordCount) {
+    systemPrompt += `\n\nTARGET TOTAL WORD COUNT: ${params.targetWordCount}`;
+    systemPrompt += `\nINSTRUCTION: Scale the section word counts so they sum up to approximately ${params.targetWordCount}.`;
+  }
+
+  // Add language instruction
+  if (params.language && params.language !== "en") {
+    const langMap: Record<string, string> = {
+      'vi': 'Vietnamese',
+      'es': 'Spanish',
+      'fr': 'French',
+      'ja': 'Japanese',
+      'ko': 'Korean'
+    };
+    const langName = langMap[params.language] || 'English';
+    systemPrompt += `\n\nIMPORTANT: Write the output in ${langName}. Keep the JSON keys in English, but the content values must be in the specified language.`;
+  }
+
+  // Add audience context with Persona priority
+  if (params.persona) {
+    // Persona takes priority
+    systemPrompt += `\n\nTARGET AUDIENCE (PRIMARY - Your defined persona):
+- Name: ${params.persona.name}
+- Age Range: ${params.persona.age_range || 'Not specified'}
+- Knowledge Level: ${params.persona.knowledge_level || 'intermediate'}
+- Pain Points: ${params.persona.pain_points?.join(', ') || 'Not specified'}
+- Preferred Tone: ${params.persona.preferred_tone || 'casual'}
+- Vocabulary: ${params.persona.vocabulary || 'conversational'}
+- Objections to Address: ${params.persona.objections?.join(', ') || 'Not specified'}`;
+  } else if (params.dna?.analysis_data?.audiencePsychology) {
+    // Fallback to DNA audience psychology
+    systemPrompt += `\n\nTARGET AUDIENCE (Inferred from source DNA):
+${params.dna.analysis_data.audiencePsychology}`;
+  }
+
+  // Add DNA context
+  if (params.dna) {
+    // Prefer detailed structuralSkeleton if available
+    const detailedStructure = params.dna.analysis_data?.structuralSkeleton;
+    const basicStructure = params.dna.structure;
+
+    systemPrompt += `\n\nCONTENT DNA PATTERNS (The "Winning Formula"):
+- Hook Type: ${params.dna.hook_type || 'Not specified'}
+- Tone: ${params.dna.tone || 'engaging'}
+- Retention Tactics: ${params.dna.retention_tactics?.join(', ') || 'Not specified'}`;
+
+    if (detailedStructure && detailedStructure.length > 0) {
+      systemPrompt += `\n\nREQUIRED STRUCTURE (Follow this EXACTLY unless innovation is allowed):
+${detailedStructure.map((s: any, i: number) =>
+        `${i + 1}. ${s.title} (Target: ~${s.wordCount} words) ${s.contentFocus ? `[Focus: ${s.contentFocus}]` : ''} ${s.pacing ? `[Pacing: ${s.pacing}]` : ''}`
+      ).join('\n')}`;
+    } else if (basicStructure && basicStructure.length > 0) {
+      systemPrompt += `\n\nREQUIRED STRUCTURE:
+${basicStructure.join(' → ')}`;
+    }
+
+    if (params.allowStructureInnovation) {
+      systemPrompt += `\n\nINNOVATION ALLOWED: You may deviate from the DNA structure by 15-25% to add novelty or better fit the topic. You can merge sections or add new relevant ones, but keep the core "DNA" feeling.`;
+    } else {
+      systemPrompt += `\n\nSTRICT ADHERENCE REQUIRED: You MUST follow the provided DNA structure/sections EXACTLY. Do not add or remove sections. Match the outline to the DNA steps 1-to-1.`;
+    }
+
+    // Hook Examples with anti-copy instruction
+    if (params.dna.hook_examples && params.dna.hook_examples.length > 0) {
+      systemPrompt += `\n\n🚫 HOOK EXAMPLES (CRITICAL - Study the PATTERN, do NOT copy exact wording):
+${params.dna.hook_examples.map((ex: string, i: number) => `${i + 1}. "${ex}"`).join('\n')}
+
+INSTRUCTION: Analyze the psychological triggers and structural patterns in these hooks. Then create an ENTIRELY ORIGINAL hook using the same psychological strategy but DIFFERENT words and examples. Copying any phrase verbatim is STRICTLY PROHIBITED.`;
+    }
+  }
+
+  let userMessage = `Create an outline for a script about: ${params.topic}`;
+  if (params.keyPoints) {
+    userMessage += `\n\nKey points to cover:\n${params.keyPoints}`;
+  }
+  if (params.uniqueAngle) {
+    userMessage += `\n\nUnique angle/hook:\n${params.uniqueAngle}`;
+  }
+
+  const messages: ChatMessage[] = [
+    { role: "system", content: systemPrompt },
+    { role: "user", content: userMessage }
+  ];
+
+  const response = await callOpenRouter(messages, apiKey, model);
+  return extractJsonFromResponse(response);
+};
+
+// Step 3: Generate full script from outline
+export const generateScriptFromOutline = async (
+  outline: GeneratedOutline,
+  params: GenerateScriptParams,
+  apiKey: string,
+  model: string = "google/gemini-3-flash-preview"
+): Promise<string> => {
+  if (!apiKey) {
+    throw new Error("API Key ERROR. PLEASE CONTACT ADMIN.");
+  }
+
+  let systemPrompt = GENERATE_SCRIPT_PROMPT;
+
+  // Add language instruction
+  if (params.language && params.language !== "en") {
+    const langMap: Record<string, string> = {
+      'vi': 'Vietnamese',
+      'es': 'Spanish',
+      'fr': 'French',
+      'ja': 'Japanese',
+      'ko': 'Korean'
+    };
+    const langName = langMap[params.language] || 'English';
+    systemPrompt += `\n\nIMPORTANT: Write the script in ${langName}.`;
+  }
+
+  // Add audience context with Persona priority
+  if (params.persona) {
+    // Persona takes priority
+    systemPrompt += `\n\nTARGET AUDIENCE (PRIMARY - Your defined persona):
+- Name: ${params.persona.name}
+- Age Range: ${params.persona.age_range || 'Not specified'}
+- Knowledge Level: ${params.persona.knowledge_level || 'intermediate'}
+- Pain Points: ${params.persona.pain_points?.join(', ') || 'Not specified'}
+- Preferred Tone: ${params.persona.preferred_tone || 'casual'}
+- Vocabulary: ${params.persona.vocabulary || 'conversational'}
+- Objections to Address: ${params.persona.objections?.join(', ') || 'Not specified'}`;
+  } else if (params.dna?.analysis_data?.audiencePsychology) {
+    // Fallback to DNA audience psychology
+    systemPrompt += `\n\nTARGET AUDIENCE (Inferred from source DNA):
+${params.dna.analysis_data.audiencePsychology}`;
+  }
+
+  // Add DNA context
+  if (params.dna) {
+    systemPrompt += `\n\nCONTENT DNA PATTERNS:
+- Hook Type: ${params.dna.hook_type || 'Not specified'}
+- Structure: ${params.dna.structure?.join(' → ') || 'Not specified'}
+- Pacing: ${params.dna.pacing || 'medium'}
+- Retention Tactics: ${params.dna.retention_tactics?.join(', ') || 'Not specified'}
+- Tone: ${params.dna.analysis_data?.linguisticFingerprint?.toneAnalysis || params.dna.tone || 'engaging'}
+- Patterns: ${params.dna.patterns?.join(', ') || 'Not specified'}`;
+
+    // Hook Examples with anti-copy instruction
+    if (params.dna.hook_examples && params.dna.hook_examples.length > 0) {
+      systemPrompt += `\n\n🚫 HOOK EXAMPLES (CRITICAL - Study the PATTERN, do NOT copy exact wording):
+${params.dna.hook_examples.map((ex: string, i: number) => `${i + 1}. "${ex}"`).join('\n')}
+
+INSTRUCTION: Analyze the psychological triggers. Create an ENTIRELY ORIGINAL hook using the same strategy but DIFFERENT words. Copying any phrase verbatim is STRICTLY PROHIBITED.`;
+    }
+  }
+
+  const outlineText = `
+OUTLINE TO FOLLOW (${outline.sections.length} sections):
+
+${outline.sections.map((s, i) => `${i + 1}. ${s.title} (Target: ${s.wordCount} words)
+   Content: ${s.content}
+   ${s.notes ? `Notes: ${s.notes}` : ''}`).join('\n\n')}
+
+Total Target Words: ${outline.totalWordCount}
+`;
+
+  const messages: ChatMessage[] = [
+    { role: "system", content: systemPrompt },
+    { role: "user", content: `Write a complete script following this outline:\n${outlineText}` }
+  ];
+
+  return await callOpenRouter(messages, apiKey, model);
+};
+
+// Legacy: Generate script directly (for backward compatibility)
+export const generateScript = async (
+  params: GenerateScriptParams,
+  apiKey: string,
+  model: string = "google/gemini-3-flash-preview"
+): Promise<string> => {
+  if (!apiKey) {
+    throw new Error("OpenRouter API Key chưa được cấu hình. Vui lòng nhập key vào Settings.");
+  }
+
+  if (!params.topic) {
+    throw new Error("Topic là bắt buộc");
+  }
+
+  let systemPrompt = `You are an expert viral content scriptwriter. Your job is to create compelling, engaging scripts that capture attention and drive engagement.
+
+Based on the provided inputs, write a complete script that:
+1. Opens with a powerful hook that grabs attention in the first 3 seconds
+2. Uses proven viral patterns and retention tactics
+3. Maintains engagement throughout with pattern interrupts
+4. Ends with a clear call-to-action
+
+Write the script in a natural, conversational tone. Include [VISUAL] cues where relevant.`;
+
+  // Add language instruction
+  if (params.language && params.language !== "en") {
+    const langMap: Record<string, string> = {
+      'vi': 'Vietnamese',
+      'es': 'Spanish',
+      'fr': 'French',
+      'ja': 'Japanese',
+      'ko': 'Korean'
+    };
+    const langName = langMap[params.language] || 'English';
+    systemPrompt += `\n\nIMPORTANT: Write the script in ${langName}.`;
+  }
+
+  // Add persona context
+  if (params.persona) {
+    systemPrompt += `\n\nTARGET AUDIENCE:
+- Name: ${params.persona.name}
+- Age Range: ${params.persona.age_range || 'Not specified'}
+- Knowledge Level: ${params.persona.knowledge_level || 'intermediate'}
+- Pain Points: ${params.persona.pain_points?.join(', ') || 'Not specified'}
+- Preferred Tone: ${params.persona.preferred_tone || 'casual'}
+- Vocabulary: ${params.persona.vocabulary || 'conversational'}`;
+  }
+
+  // Add DNA context
+  if (params.dna) {
+    systemPrompt += `\n\nCONTENT DNA PATTERNS:
+- Hook Type: ${params.dna.hook_type || 'Not specified'}
+- Structure: ${params.dna.structure?.join(' → ') || 'Not specified'}
+- Pacing: ${params.dna.pacing || 'medium'}
+- Retention Tactics: ${params.dna.retention_tactics?.join(', ') || 'Not specified'}
+- Tone: ${params.dna.tone || 'engaging'}
+- Patterns: ${params.dna.patterns?.join(', ') || 'Not specified'}`;
+  }
+
+  // Add custom prompt
+  if (params.customPrompt) {
+    systemPrompt += `\n\nADDITIONAL INSTRUCTIONS:\n${params.customPrompt}`;
+  }
+
+  let userMessage = `Write a script about: ${params.topic}`;
+  if (params.keyPoints) {
+    userMessage += `\n\nKey points to cover:\n${params.keyPoints}`;
+  }
+  if (params.uniqueAngle) {
+    userMessage += `\n\nUnique angle/hook:\n${params.uniqueAngle}`;
+  }
+
+  const messages: ChatMessage[] = [
+    { role: "system", content: systemPrompt },
+    { role: "user", content: userMessage }
+  ];
+
+  return await callOpenRouter(messages, apiKey, model);
+};
+
+export const scoreScript = async (
+  script: string,
+  apiKey: string,
+  model: string = "google/gemini-3-flash-preview",
+  dna?: any,
+  persona?: any
+): Promise<ScoreResult> => {
+  if (!apiKey) {
+    throw new Error("OpenRouter API Key chưa được cấu hình. Vui lòng nhập key vào Settings.");
+  }
+
+  if (!script) {
+    throw new Error("Script là bắt buộc");
+  }
+
+  let systemPrompt = SCORE_SCRIPT_PROMPT;
+
+  if (dna) {
+    systemPrompt += `\n\nEvaluate against these DNA patterns:
+- Hook Type: ${dna.hook_type || 'Not specified'}
+- Structure: ${dna.structure?.join(' → ') || 'Not specified'}
+- Tone: ${dna.tone || 'engaging'}`;
+  }
+
+  if (persona) {
+    systemPrompt += `\n\nTarget audience:
+- Name: ${persona.name}
+- Knowledge Level: ${persona.knowledge_level || 'intermediate'}`;
+  }
+
+  const messages: ChatMessage[] = [
+    { role: "system", content: systemPrompt },
+    { role: "user", content: `Score this script:\n\n${script}` }
+  ];
+
+  const response = await callOpenRouter(messages, apiKey, model);
+  return extractJsonFromResponse(response);
+};
+
+// ============================================================================
+// SECTION-BY-SECTION GENERATION (with Hybrid Coherence System)
+// ============================================================================
+
+/**
+ * Count words in a string
+ */
+export const countWords = (text: string): number => {
+  return text.trim().split(/\s+/).filter(Boolean).length;
+};
+
+/**
+ * Scale DNA section word counts to match user's target
+ * @returns sections with scaled, rounded integer word counts
+ */
+export const scaleDnaWordCounts = (
+  sections: OutlineSection[],
+  targetTotalWords: number
+): OutlineSection[] => {
+  const currentTotal = sections.reduce((sum, s) => sum + s.wordCount, 0);
+  if (currentTotal === 0 || targetTotalWords <= 0) return sections;
+
+  const scaleFactor = targetTotalWords / currentTotal;
+
+  // Scale and round to integers
+  const scaled = sections.map(s => ({
+    ...s,
+    wordCount: Math.round(s.wordCount * scaleFactor)
+  }));
+
+  // Adjust last section to hit exact target (fix rounding errors)
+  const scaledTotal = scaled.reduce((sum, s) => sum + s.wordCount, 0);
+  const diff = targetTotalWords - scaledTotal;
+  if (scaled.length > 0 && diff !== 0) {
+    scaled[scaled.length - 1].wordCount += diff;
+  }
+
+  return scaled;
+};
+
+/**
+ * Get last N words from text for context (default 500)
+ */
+export const getLastNWords = (text: string, n: number = 500): string => {
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  if (words.length <= n) return text;
+  return words.slice(-n).join(' ');
+};
+
+/**
+ * Extract key points from a section for coherence
+ */
+export const extractKeyPoints = async (
+  sectionContent: string,
+  sectionTitle: string,
+  apiKey: string,
+  model: string = "google/gemini-3-flash-preview"
+): Promise<string[]> => {
+  const prompt = `You just wrote this section titled "${sectionTitle}":
+"""${sectionContent}"""
+
+Extract 3-5 KEY POINTS that MUST be remembered for continuity in following sections:
+- Key concepts/terms introduced
+- Promises made to the reader (open loops)
+- Specific examples, numbers, or names used
+- Emotional tone established
+
+Output JSON only: { "keyPoints": ["point 1", "point 2", "point 3"] }`;
+
+  const messages: ChatMessage[] = [
+    { role: "system", content: "You are a content analyzer. Extract key points for continuity. Output JSON only." },
+    { role: "user", content: prompt }
+  ];
+
+  try {
+    const response = await callOpenRouter(messages, apiKey, model);
+    const parsed = extractJsonFromResponse(response);
+    return parsed.keyPoints || [];
+  } catch {
+    return [];
+  }
+};
+
+/**
+ * Generate a single section with coherence context
+ */
+export const generateSectionContent = async (
+  section: OutlineSection,
+  sectionIndex: number,
+  accumulatedKeyPoints: string[][],
+  previousSectionContent: string | null,
+  params: GenerateScriptParams,
+  apiKey: string,
+  model: string = "google/gemini-3-flash-preview"
+): Promise<string> => {
+  let systemPrompt = `You are an expert viral content scriptwriter writing Section ${sectionIndex + 1}: "${section.title}".
+
+RULES:
+1. Write ONLY spoken voiceover content (no visual cues).
+2. Maintain the SAME voice, vocabulary, and energy as previous content.
+3. DO NOT repeat concepts already covered in Key Points.
+4. Target: ${section.wordCount} words (±10%).
+5. Be DETAILED and insightful, not generic.`;
+
+  // Add language instruction
+  if (params.language && params.language !== "en") {
+    const langMap: Record<string, string> = {
+      'vi': 'Vietnamese', 'es': 'Spanish', 'fr': 'French', 'ja': 'Japanese', 'ko': 'Korean'
+    };
+    systemPrompt += `\n\nIMPORTANT: Write in ${langMap[params.language] || 'English'}.`;
+  }
+
+  // Add persona context
+  if (params.persona) {
+    systemPrompt += `\n\nTARGET AUDIENCE:
+- Knowledge Level: ${params.persona.knowledge_level || 'intermediate'}
+- Preferred Tone: ${params.persona.preferred_tone || 'casual'}`;
+  }
+
+  // Add DNA context
+  if (params.dna) {
+    systemPrompt += `\n\nCONTENT DNA:
+- Tone: ${params.dna.analysis_data?.linguisticFingerprint?.toneAnalysis || params.dna.tone || 'engaging'}
+- Pacing: ${params.dna.pacing || 'medium'}`;
+  }
+
+  // Build user message with coherence context
+  let userMessage = "";
+
+  // Add accumulated key points from ALL previous sections
+  if (accumulatedKeyPoints.length > 0) {
+    userMessage += `=== KEY POINTS FROM PREVIOUS SECTIONS (DO NOT REPEAT) ===\n`;
+    accumulatedKeyPoints.forEach((points, i) => {
+      if (points.length > 0) {
+        userMessage += `Section ${i + 1}: ${points.join(' | ')}\n`;
+      }
+    });
+    userMessage += "\n";
+  }
+
+  // Add FULL previous section for flow continuity
+  if (previousSectionContent) {
+    userMessage += `=== PREVIOUS SECTION (maintain flow) ===\n${previousSectionContent}\n\n`;
+  }
+
+  // Current section outline
+  userMessage += `=== YOUR TASK: Write Section "${section.title}" ===
+Content Focus: ${section.content}
+Target Words: ${section.wordCount}
+${section.notes ? `Notes: ${section.notes}` : ''}
+
+`;
+
+  // Transition instruction (only if not first section)
+  if (previousSectionContent) {
+    userMessage += `INSTRUCTION:
+1. Start with a SMOOTH TRANSITION from the previous section (1-2 sentences).
+2. Then write the full content for "${section.title}".
+3. DO NOT start with generic phrases like "Now let's talk about...". Be creative.
+
+Write the full section content now:`;
+  } else {
+    userMessage += `Write the full section content now:`;
+  }
+
+  const messages: ChatMessage[] = [
+    { role: "system", content: systemPrompt },
+    { role: "user", content: userMessage }
+  ];
+
+  return await callOpenRouter(messages, apiKey, model);
+};
+
+/**
+ * Expand a section if word count is insufficient
+ */
+export const expandSection = async (
+  currentContent: string,
+  targetWordCount: number,
+  section: OutlineSection,
+  apiKey: string,
+  model: string = "google/gemini-3-flash-preview"
+): Promise<string> => {
+  const currentWords = countWords(currentContent);
+  const missingWords = targetWordCount - currentWords;
+
+  const prompt = `Current section "${section.title}" has ${currentWords} words.
+Target: ${targetWordCount} words.
+Missing: approximately ${missingWords} words.
+
+Current content:
+"""${currentContent}"""
+
+EXPAND this section by:
+1. Adding more specific examples or scenarios
+2. Deepening explanations with "why" and "how"
+3. Adding rhetorical questions for engagement
+4. Including brief "pause moments" for impact
+
+DO NOT:
+- Repeat what's already written
+- Add filler content
+- Change the core message
+
+Return the COMPLETE expanded section (the entire section, not just additions):`;
+
+  const messages: ChatMessage[] = [
+    { role: "system", content: "You are a content expander. Add depth and value without repetition." },
+    { role: "user", content: prompt }
+  ];
+
+  return await callOpenRouter(messages, apiKey, model);
+};
+
+/**
+ * Progress callback for UI updates
+ */
+export type SectionProgressCallback = (
+  currentSection: number,
+  totalSections: number,
+  status: string
+) => void;
+
+/**
+ * Main function: Generate script using hybrid chunk approach (2 sections per API call)
+ */
+export const generateScriptSectionBySection = async (
+  outline: GeneratedOutline,
+  params: GenerateScriptParams,
+  apiKey: string,
+  model: string = "google/gemini-3-flash-preview",
+  onProgress?: SectionProgressCallback
+): Promise<string> => {
+  if (!apiKey) {
+    throw new Error("OpenRouter API Key chưa được cấu hình.");
+  }
+
+  // Scale sections to match user's target word count
+  let sections = outline.sections;
+  if (params.targetWordCount && params.targetWordCount > 0) {
+    sections = scaleDnaWordCounts(sections, params.targetWordCount);
+  }
+
+  const SECTIONS_PER_CHUNK = 2;
+  const allChunkResults: string[] = [];
+  let accumulatedContent = "";
+
+  // Chunk sections into pairs
+  const chunks: OutlineSection[][] = [];
+  for (let i = 0; i < sections.length; i += SECTIONS_PER_CHUNK) {
+    chunks.push(sections.slice(i, i + SECTIONS_PER_CHUNK));
+  }
+
+  const totalSections = sections.length;
+  let processedSections = 0;
+
+  for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
+    const chunk = chunks[chunkIndex];
+    const chunkTargetWords = chunk.reduce((sum, s) => sum + s.wordCount, 0);
+
+    // Progress update
+    processedSections += chunk.length;
+    const sectionNames = chunk.map(s => s.title).join(" & ");
+    onProgress?.(processedSections, totalSections, `Writing "${sectionNames}"...`);
+
+    // Build system prompt
+    let systemPrompt = `You are an expert viral content scriptwriter. Write the following ${chunk.length} section(s) in one continuous, seamless flow.
+
+RULES:
+1. Write ONLY spoken voiceover content (no visual cues, no markdown).
+2. Create natural transitions between sections without forced phrases.
+3. Be DETAILED, insightful, and valuable - not generic.
+
+⚠️ STRICT WORD COUNT (CRITICAL):
+- TOTAL for this chunk: EXACTLY ${chunkTargetWords} words
+- Tolerance: ±5% ONLY (${Math.floor(chunkTargetWords * 0.95)}-${Math.ceil(chunkTargetWords * 1.05)} words)
+- Count your words before finalizing
+- Going significantly over or under is NOT acceptable
+
+⚠️ TTS-OPTIMIZED OUTPUT (CRITICAL):
+- NO markdown symbols: no *, #, **, _, ~, \`, etc.
+- NO section titles or headers in the output
+- NO film/video directions: no [B-roll], [Cut to], [VISUAL], (pause), etc.
+- NO parenthetical notes or brackets of any kind
+- ONLY clean, speakable text that can be read aloud naturally`;
+
+    // Add language instruction
+    if (params.language && params.language !== "en") {
+      const langMap: Record<string, string> = {
+        'vi': 'Vietnamese', 'es': 'Spanish', 'fr': 'French', 'ja': 'Japanese', 'ko': 'Korean'
+      };
+      systemPrompt += `\n\nIMPORTANT: Write in ${langMap[params.language] || 'English'}.`;
+    }
+
+    // Add DNA context
+    if (params.dna) {
+      systemPrompt += `\n\nCONTENT DNA:
+- Tone: ${params.dna.analysis_data?.linguisticFingerprint?.toneAnalysis || params.dna.tone || 'engaging'}
+- Pacing: ${params.dna.pacing || 'medium'}`;
+    }
+
+    // Add persona context
+    if (params.persona) {
+      systemPrompt += `\n\nTARGET AUDIENCE:
+- Knowledge Level: ${params.persona.knowledge_level || 'intermediate'}
+- Preferred Tone: ${params.persona.preferred_tone || 'casual'}`;
+    }
+
+    // Build user message
+    let userMessage = "";
+
+    // Add last 500 words as context (not full previous content)
+    if (accumulatedContent.length > 0) {
+      const contextWords = getLastNWords(accumulatedContent, 500);
+      userMessage += `=== PREVIOUS CONTEXT (last 500 words - maintain flow) ===\n${contextWords}\n\n`;
+    }
+
+    // Section details
+    userMessage += `=== SECTIONS TO WRITE ===\n`;
+    chunk.forEach((section, i) => {
+      userMessage += `${i + 1}. "${section.title}" (~${section.wordCount} words)\n`;
+      userMessage += `   Content: ${section.content}\n`;
+      if (section.notes) userMessage += `   Notes: ${section.notes}\n`;
+      userMessage += `\n`;
+    });
+
+    userMessage += `TOTAL TARGET: ${chunkTargetWords} words\n\n`;
+
+    if (chunk.length > 1) {
+      userMessage += `OUTPUT FORMAT: Use |||SECTION||| delimiter between sections.\n\n`;
+    }
+
+    userMessage += `Write the content now:`;
+
+    const messages: ChatMessage[] = [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userMessage }
+    ];
+
+    const chunkContent = await callOpenRouter(messages, apiKey, model);
+    allChunkResults.push(chunkContent);
+    accumulatedContent += "\n" + chunkContent;
+  }
+
+  // Combine all chunks
+  return allChunkResults.join("\n|||SECTION|||\n");
+};
+
+// ============================================
+// AI ASSISTANT FUNCTIONS
+// ============================================
+
+export interface SuggestedAngle {
+  angle: string;
+  reasoning: string;
+}
+
+export interface SEOResult {
+  title: string;
+  description: string;
+  tags: string[];
+}
+
+/**
+ * AI suggests unique angles based on topic, DNA, and persona
+ */
+export const suggestUniqueAngle = async (
+  topic: string,
+  dna: any | null,
+  persona: any | null,
+  apiKey: string,
+  model: string = "google/gemini-3-flash-preview"
+): Promise<SuggestedAngle[]> => {
+  const prompt = `You are a viral content strategist. Suggest 3 unique angles for creating content about this topic.
+
+TOPIC: ${topic}
+
+${dna ? `DNA STYLE:
+- Hook Type: ${dna.hook_type || 'engaging'}
+- Tone: ${dna.tone || 'conversational'}
+- Niche: ${dna.niche || 'general'}` : ''}
+
+${persona ? `TARGET AUDIENCE:
+- Name: ${persona.name}
+- Knowledge Level: ${persona.knowledge_level || 'intermediate'}
+- Pain Points: ${persona.pain_points?.join(', ') || 'Not specified'}` : ''}
+
+Respond in JSON format:
+{
+  "angles": [
+    { "angle": "The unique angle/hook", "reasoning": "Why this angle works" },
+    { "angle": "Another angle", "reasoning": "Why this works" },
+    { "angle": "Third angle", "reasoning": "Why this works" }
+  ]
+}`;
+
+  const messages: ChatMessage[] = [
+    { role: "user", content: prompt }
+  ];
+
+  const response = await callOpenRouter(messages, apiKey, model);
+  const parsed = extractJsonFromResponse(response);
+  return parsed.angles || [];
+};
+
+/**
+ * AI rewrites a section with optional user instructions
+ */
+export const rewriteSection = async (
+  sectionTitle: string,
+  currentContent: string,
+  userInstructions: string,
+  context: {
+    previousSections?: string[];
+    dna?: any;
+    persona?: any;
+    targetWordCount?: number;
+  },
+  apiKey: string,
+  model: string = "google/gemini-3-flash-preview"
+): Promise<string> => {
+  let prompt = `You are an expert content writer. Rewrite this section while maintaining quality and coherence.
+
+SECTION: "${sectionTitle}"
+${context.targetWordCount ? `TARGET WORD COUNT: ~${context.targetWordCount} words` : ''}
+
+CURRENT CONTENT:
+"""
+${currentContent}
+"""
+
+${userInstructions ? `USER INSTRUCTIONS: ${userInstructions}` : 'Make it more engaging and impactful.'}
+
+${context.previousSections && context.previousSections.length > 0 ? `
+PREVIOUS SECTIONS (for context, do not repeat):
+${context.previousSections.slice(-2).join('\n---\n')}
+` : ''}
+
+${context.dna ? `STYLE GUIDE:
+- Tone: ${context.dna.tone || 'engaging'}
+- Pacing: ${context.dna.pacing || 'medium'}` : ''}
+
+${context.persona ? `AUDIENCE:
+- Knowledge Level: ${context.persona.knowledge_level || 'intermediate'}
+- Preferred Tone: ${context.persona.preferred_tone || 'casual'}` : ''}
+
+⚠️ TTS-OPTIMIZED OUTPUT (CRITICAL):
+- NO markdown symbols: no *, #, **, _, ~, \`, etc.
+- NO section titles or headers in the output
+- NO film/video directions: no [B-roll], [Cut to], [VISUAL], (pause), etc.
+- NO parenthetical notes or brackets of any kind
+- ONLY clean, speakable text that can be read aloud naturally
+
+Write ONLY the rewritten section content. No explanations, no formatting, just clean text.`;
+
+  const messages: ChatMessage[] = [
+    { role: "user", content: prompt }
+  ];
+
+  return await callOpenRouter(messages, apiKey, model);
+};
+
+/**
+ * AI generates SEO-optimized title, description, and tags
+ */
+export const generateSEO = async (
+  script: string,
+  dna: any | null,
+  persona: any | null,
+  apiKey: string,
+  model: string = "google/gemini-3-flash-preview"
+): Promise<SEOResult> => {
+  const prompt = `You are an SEO expert for video content. Generate optimized metadata for this script.
+
+SCRIPT CONTENT:
+"""
+${script.substring(0, 2000)}${script.length > 2000 ? '...' : ''}
+"""
+
+${dna ? `CONTENT STYLE: ${dna.niche || 'general'} - ${dna.tone || 'engaging'}` : ''}
+${persona ? `TARGET AUDIENCE: ${persona.name || 'General audience'}` : ''}
+
+Generate SEO-optimized metadata. Respond in JSON:
+{
+  "title": "Catchy, SEO-friendly title (50-60 chars)",
+  "description": "Compelling description with keywords (150-160 chars)",
+  "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"]
+}`;
+
+  const messages: ChatMessage[] = [
+    { role: "user", content: prompt }
+  ];
+
+  const response = await callOpenRouter(messages, apiKey, model);
+  const parsed = extractJsonFromResponse(response);
+
+  return {
+    title: parsed.title || "",
+    description: parsed.description || "",
+    tags: parsed.tags || []
+  };
+};
