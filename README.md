@@ -1,0 +1,2 @@
+# logdd
+AI noobbbbb
