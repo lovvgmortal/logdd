@@ -11,14 +11,33 @@ export interface Persona {
   name: string;
   age_range: string | null;
   knowledge_level: string | null;
-  pain_points: string[] | null;
+  pain_points: string[] | Array<{ text: string; intensity: string; evidence: string }> | null;
   preferred_tone: string | null;
   vocabulary: string | null;
   platform: string | null;
   description: string | null;
-  motivations: string[] | null;
-  objections: string[] | null;
+  motivations: string[] | Array<{ text: string; frequency: string; source: string }> | null;
+  objections: string[] | Array<{ text: string; frequency: string; source: string }> | null;
   content_sources: any[] | null; // JSONB array of { id, script, youtubeUrl, comments }
+  // Extended fields (from enhanced analysis)
+  knowledge_profile?: {
+    domainKnowledge: number;
+    engagementDepth: number;
+    skepticismLevel: number;
+    reasoning: string;
+  } | null;
+  demographics?: {
+    ageEvidence: string;
+    locationHints: string;
+    occupationInference: string;
+    digitalFluency: string;
+  } | null;
+  content_consumption?: {
+    attentionSpan: string;
+    engagementTriggers: string[];
+    learningStyle: string[];
+    preferredContentLength: string;
+  } | null;
   created_at: string;
   updated_at: string;
 }

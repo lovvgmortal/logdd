@@ -1,4 +1,5 @@
 import { callOpenRouter, extractJsonFromResponse, ChatMessage } from "./openrouter";
+import { DNA_PERSONA_CONFLICT_MATRIX, detectConflicts, generateResolutionStrategy } from "@/prompts/conflict-resolution";
 
 export interface GenerateScriptParams {
   topic: string;
@@ -42,76 +43,18 @@ export interface ScoreResult {
 }
 
 // Updated: Generate outline sections based on DNA skeleton
-const GENERATE_OUTLINE_PROMPT = `You are an expert viral content strategist. Create a script outline that follows the provided DNA structure EXACTLY.
+import { GENERATE_OUTLINE_PROMPT, GENERATE_SCRIPT_PROMPT, SCORE_SCRIPT_PROMPT, REWRITE_SECTION_PROMPT } from "@/prompts/writer";
 
-CRITICAL: 
-- The number of sections in the outline MUST match the DNA skeleton exactly.
-- Each section title and word count should match the DNA skeleton.
-- Do NOT add separate "Hook" or "CTA" sections - the DNA already defines where hooks and CTAs should be.
+// Helper: Build conflict resolution context
+const buildConflictResolutionContext = (dna: any, persona: any): string => {
+  if (!persona || !dna) return '';
 
-Respond in JSON format:
-{
-  "sections": [
-    {
-      "title": "Section name from DNA",
-      "wordCount": 0,
-      "content": "What to cover in this section",
-      "notes": "Optional notes"
-    }
-  ],
-  "totalWordCount": 0
-}`;
-
-const GENERATE_SCRIPT_PROMPT = `You are an expert viral content scriptwriter. Your job is to create compelling, engaging, and HIGH-QUALITY scripts.
-
-Based on the provided outline, write a COMPLETE script.
-Rules:
-1. Follow the outline structure exactly - each section in outline = one section in script.
-2. Content must be DETAILED, insightful, and valuable (not generic or superficial).
-3. Use a natural, conversational, and engaging tone appropriate for the audience.
-4. Focus PURELY on the spoken voiceover (DO NOT include [VISUAL] cues or scene descriptions).
-5. SEPARATE sections strictly with the delimiter: |||SECTION|||
-
-⚠️ TTS-OPTIMIZED OUTPUT (CRITICAL):
-- NO markdown symbols: no *, #, **, _, ~, \`, etc.
-- NO section titles or headers in the output
-- NO film/video directions: no [B-roll], [Cut to], [VISUAL], (pause), etc.
-- NO parenthetical notes or brackets of any kind
-- ONLY clean, speakable text that can be read aloud naturally
-- Write as if you are speaking directly to the audience
-
-Format:
-[Section 1 Content - clean text only]
-|||SECTION|||
-[Section 2 Content - clean text only]
-|||SECTION|||
-[Section 3 Content - clean text only]
-...
-(One section for each outline section)`;
-
-const SCORE_SCRIPT_PROMPT = `You are an expert content analyst. Score this script on viral potential.
-
-Evaluate and score (0-100) these aspects:
-1. Hook strength (first 3 seconds)
-2. Structure and flow
-3. Engagement and retention tactics
-4. Clarity and messaging
-5. Call-to-action effectiveness
-
-Respond in JSON:
-{
-  "score": overall_score_0_to_100,
-  "breakdown": {
-    "hook": 0-100,
-    "structure": 0-100,
-    "engagement": 0-100,
-    "clarity": 0-100,
-    "callToAction": 0-100
-  },
-  "strengths": ["strength 1", "strength 2"],
-  "improvements": ["improvement 1", "improvement 2"],
-  "suggestions": ["actionable suggestion 1", "actionable suggestion 2"]
-}`;
+  const conflicts = detectConflicts(dna, persona);
+  if (conflicts.length > 0) {
+    return `\n\n${DNA_PERSONA_CONFLICT_MATRIX}\n\n${generateResolutionStrategy(dna, persona)}`;
+  }
+  return `\n\n⚖️ DNA-PERSONA ALIGNMENT: No major conflicts detected. Follow DNA structure with Persona voice.`;
+};
 
 // Step 2: Generate Outline from inputs
 export const generateOutline = async (
@@ -148,6 +91,9 @@ export const generateOutline = async (
     systemPrompt += `\n\nIMPORTANT: Write the output in ${langName}. Keep the JSON keys in English, but the content values must be in the specified language.`;
   }
 
+  // Add conflict resolution matrix if both DNA and Persona exist
+  systemPrompt += buildConflictResolutionContext(params.dna, params.persona);
+
   // Add audience context with Persona priority
   if (params.persona) {
     // Persona takes priority
@@ -171,10 +117,36 @@ ${params.dna.analysis_data.audiencePsychology}`;
     const detailedStructure = params.dna.analysis_data?.structuralSkeleton;
     const basicStructure = params.dna.structure;
 
-    systemPrompt += `\n\nCONTENT DNA PATTERNS (The "Winning Formula"):
-- Hook Type: ${params.dna.hook_type || 'Not specified'}
-- Tone: ${params.dna.tone || 'engaging'}
-- Retention Tactics: ${params.dna.retention_tactics?.join(', ') || 'Not specified'}`;
+    // --- ENHANCED DNA CONTEXT ---
+    systemPrompt += `\n\nCONTENT DNA STRATEGY (The "Winning Formula"):`;
+
+    // 1. Hook Strategy
+    const hookAngle = params.dna.analysis_data?.hookAngle;
+    if (hookAngle) {
+      systemPrompt += `\n- Hook Angle: ${hookAngle.angleCategory || params.dna.hook_type || 'Custom'} (${hookAngle.deconstruction || 'No details'})`;
+    } else {
+      systemPrompt += `\n- Hook Type: ${params.dna.hook_type || 'Not specified'}`;
+    }
+
+    // 2. Audience Psychology (Deep)
+    if (params.dna.analysis_data?.audiencePsychology) {
+      systemPrompt += `\n- Audience Psychology: ${params.dna.analysis_data.audiencePsychology}`;
+    }
+
+    // 3. Core Patterns (Strategy)
+    if (params.dna.analysis_data?.corePatterns?.length) {
+      systemPrompt += `\n- Success Patterns: ${params.dna.analysis_data.corePatterns.join(' | ')}`;
+    }
+
+    // 4. Flop Avoidance (Guardrails)
+    if (params.dna.analysis_data?.flopAvoidance?.length) {
+      systemPrompt += `\n- ⚠️ FLOP AVOIDANCE (Do NOT do this): ${params.dna.analysis_data.flopAvoidance.join(' | ')}`;
+    }
+
+    // 5. Tone & Pacing (Structure/Rhythm)
+    systemPrompt += `\n- Pacing: ${params.dna.pacing || 'medium'}`;
+    systemPrompt += `\n- Tone: ${params.dna.tone || 'engaging'}`;
+    systemPrompt += `\n- Retention Tactics: ${params.dna.retention_tactics?.join(', ') || 'Not specified'}`;
 
     if (detailedStructure && detailedStructure.length > 0) {
       systemPrompt += `\n\nREQUIRED STRUCTURE (Follow this EXACTLY unless innovation is allowed):
@@ -199,6 +171,11 @@ ${params.dna.hook_examples.map((ex: string, i: number) => `${i + 1}. "${ex}"`).j
 
 INSTRUCTION: Analyze the psychological triggers and structural patterns in these hooks. Then create an ENTIRELY ORIGINAL hook using the same psychological strategy but DIFFERENT words and examples. Copying any phrase verbatim is STRICTLY PROHIBITED.`;
     }
+  }
+
+  // Inject Unique Angle Context
+  if (params.uniqueAngle) {
+    systemPrompt += `\n\n=== UNIQUE ANGLE / NEW IDEA ===\n"${params.uniqueAngle}"\n\nINSTRUCTION: You MUST weave this unique angle into the content strategy of the outline. Don't just copy the DNA patterns; adapt them to serve this specific new angle.`;
   }
 
   let userMessage = `Create an outline for a script about: ${params.topic}`;
@@ -244,6 +221,9 @@ export const generateScriptFromOutline = async (
     systemPrompt += `\n\nIMPORTANT: Write the script in ${langName}.`;
   }
 
+  // Add conflict resolution matrix if both DNA and Persona exist
+  systemPrompt += buildConflictResolutionContext(params.dna, params.persona);
+
   // Add audience context with Persona priority
   if (params.persona) {
     // Persona takes priority
@@ -263,13 +243,44 @@ ${params.dna.analysis_data.audiencePsychology}`;
 
   // Add DNA context
   if (params.dna) {
-    systemPrompt += `\n\nCONTENT DNA PATTERNS:
-- Hook Type: ${params.dna.hook_type || 'Not specified'}
-- Structure: ${params.dna.structure?.join(' → ') || 'Not specified'}
-- Pacing: ${params.dna.pacing || 'medium'}
-- Retention Tactics: ${params.dna.retention_tactics?.join(', ') || 'Not specified'}
-- Tone: ${params.dna.analysis_data?.linguisticFingerprint?.toneAnalysis || params.dna.tone || 'engaging'}
-- Patterns: ${params.dna.patterns?.join(', ') || 'Not specified'}`;
+    // --- ENHANCED DNA CONTEXT ---
+    systemPrompt += `\n\n=== CONTENT DNA STRATEGY ===`;
+    systemPrompt += `\nUSE THIS FOR STRUCTURE, PACING, AND STRATEGY.`;
+
+    // 1. Hook Strategy
+    const hookAngle = params.dna.analysis_data?.hookAngle;
+    if (hookAngle) {
+      systemPrompt += `\n- Hook Angle: ${hookAngle.angleCategory} - ${hookAngle.deconstruction}`;
+    }
+
+    // 2. Audience Psychology (Deep)
+    if (params.dna.analysis_data?.audiencePsychology) {
+      systemPrompt += `\n- Audience Psychology: ${params.dna.analysis_data.audiencePsychology}`;
+    }
+
+    // 3. Strategic Patterns
+    if (params.dna.analysis_data?.corePatterns?.length) {
+      systemPrompt += `\n- ⚡ CORE STRATEGIES (Apply these): ${params.dna.analysis_data.corePatterns.join('\n  * ')}`;
+    }
+
+    // 4. Viral X-Factors
+    if (params.dna.analysis_data?.viralXFactors?.length) {
+      systemPrompt += `\n- 🔥 X-FACTORS (The 'Secret Sauce'): ${params.dna.analysis_data.viralXFactors.join('\n  * ')}`;
+    }
+
+    // 5. Flop Avoidance
+    if (params.dna.analysis_data?.flopAvoidance?.length) {
+      systemPrompt += `\n- 🛑 FLOP AVOIDANCE (Strictly Avoid): ${params.dna.analysis_data.flopAvoidance.join('\n  * ')}`;
+    }
+
+    // 6. Objections
+    if (params.dna.analysis_data?.objections?.length) {
+      systemPrompt += `\n- 🛡️ OBJECTIONS TO PRE-EMPT: ${params.dna.analysis_data.objections.join(', ')}`;
+    }
+
+    systemPrompt += `\n\n- Structure: ${params.dna.structure?.join(' → ') || 'Follow Outline'}`;
+    systemPrompt += `\n- Pacing: ${params.dna.pacing || params.dna.analysis_data?.pacingAndTone?.pacing || 'medium'}`;
+    systemPrompt += `\n- Retention Tactics: ${params.dna.retention_tactics?.join(', ') || 'Not specified'}`;
 
     // Hook Examples with anti-copy instruction
     if (params.dna.hook_examples && params.dna.hook_examples.length > 0) {
@@ -429,7 +440,8 @@ export const countWords = (text: string): number => {
 };
 
 /**
- * Scale DNA section word counts to match user's target
+ * Scale DNA section word counts to match user's target with safeguards
+ * Prevents sections from being too small or too large
  * @returns sections with scaled, rounded integer word counts
  */
 export const scaleDnaWordCounts = (
@@ -439,19 +451,56 @@ export const scaleDnaWordCounts = (
   const currentTotal = sections.reduce((sum, s) => sum + s.wordCount, 0);
   if (currentTotal === 0 || targetTotalWords <= 0) return sections;
 
+  // Define constraints
+  const MIN_SECTION_WORDS = 80;  // Minimum words per section (enough to develop an idea)
+  const MAX_SECTION_RATIO = 0.35; // Max 35% of total for any single section
+  const MAX_SECTION_WORDS = Math.floor(targetTotalWords * MAX_SECTION_RATIO);
+
   const scaleFactor = targetTotalWords / currentTotal;
 
-  // Scale and round to integers
-  const scaled = sections.map(s => ({
-    ...s,
-    wordCount: Math.round(s.wordCount * scaleFactor)
-  }));
+  // Scale and apply constraints
+  let scaled = sections.map(s => {
+    const rawScaled = Math.round(s.wordCount * scaleFactor);
+    // Clamp to min/max
+    const clamped = Math.max(MIN_SECTION_WORDS, Math.min(MAX_SECTION_WORDS, rawScaled));
+    return {
+      ...s,
+      wordCount: clamped
+    };
+  });
 
-  // Adjust last section to hit exact target (fix rounding errors)
-  const scaledTotal = scaled.reduce((sum, s) => sum + s.wordCount, 0);
-  const diff = targetTotalWords - scaledTotal;
-  if (scaled.length > 0 && diff !== 0) {
-    scaled[scaled.length - 1].wordCount += diff;
+  // Re-normalize to hit target total (after clamping)
+  const clampedTotal = scaled.reduce((sum, s) => sum + s.wordCount, 0);
+  const diff = targetTotalWords - clampedTotal;
+
+  if (diff !== 0) {
+    // Distribute the difference proportionally across sections that have room
+    // Positive diff = add more words, negative = remove words
+    const adjustableSections = scaled.map((s, idx) => ({
+      idx,
+      room: diff > 0
+        ? MAX_SECTION_WORDS - s.wordCount // Room to grow
+        : s.wordCount - MIN_SECTION_WORDS // Room to shrink
+    })).filter(s => s.room > 0);
+
+    if (adjustableSections.length > 0) {
+      const totalRoom = adjustableSections.reduce((sum, s) => sum + s.room, 0);
+
+      adjustableSections.forEach(({ idx, room }) => {
+        const proportion = room / totalRoom;
+        const adjustment = Math.round(diff * proportion);
+        scaled[idx].wordCount += adjustment;
+      });
+
+      // Final rounding fix: add/subtract remainder to/from largest section
+      const finalTotal = scaled.reduce((sum, s) => sum + s.wordCount, 0);
+      const remainder = targetTotalWords - finalTotal;
+      if (remainder !== 0) {
+        const largestIdx = scaled.reduce((maxIdx, s, idx) =>
+          s.wordCount > scaled[maxIdx].wordCount ? idx : maxIdx, 0);
+        scaled[largestIdx].wordCount += remainder;
+      }
+    }
   }
 
   return scaled;
@@ -838,39 +887,8 @@ export const rewriteSection = async (
   apiKey: string,
   model: string = "google/gemini-3-flash-preview"
 ): Promise<string> => {
-  let prompt = `You are an expert content writer. Rewrite this section while maintaining quality and coherence.
-
-SECTION: "${sectionTitle}"
-${context.targetWordCount ? `TARGET WORD COUNT: ~${context.targetWordCount} words` : ''}
-
-CURRENT CONTENT:
-"""
-${currentContent}
-"""
-
-${userInstructions ? `USER INSTRUCTIONS: ${userInstructions}` : 'Make it more engaging and impactful.'}
-
-${context.previousSections && context.previousSections.length > 0 ? `
-PREVIOUS SECTIONS (for context, do not repeat):
-${context.previousSections.slice(-2).join('\n---\n')}
-` : ''}
-
-${context.dna ? `STYLE GUIDE:
-- Tone: ${context.dna.tone || 'engaging'}
-- Pacing: ${context.dna.pacing || 'medium'}` : ''}
-
-${context.persona ? `AUDIENCE:
-- Knowledge Level: ${context.persona.knowledge_level || 'intermediate'}
-- Preferred Tone: ${context.persona.preferred_tone || 'casual'}` : ''}
-
-⚠️ TTS-OPTIMIZED OUTPUT (CRITICAL):
-- NO markdown symbols: no *, #, **, _, ~, \`, etc.
-- NO section titles or headers in the output
-- NO film/video directions: no [B-roll], [Cut to], [VISUAL], (pause), etc.
-- NO parenthetical notes or brackets of any kind
-- ONLY clean, speakable text that can be read aloud naturally
-
-Write ONLY the rewritten section content. No explanations, no formatting, just clean text.`;
+  // Use centralized prompt constructor
+  const prompt = REWRITE_SECTION_PROMPT(sectionTitle, currentContent, userInstructions, context);
 
   const messages: ChatMessage[] = [
     { role: "user", content: prompt }

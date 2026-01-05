@@ -23,6 +23,8 @@ import type { GeneratedOutline, OutlineSection, ScoreResult } from "@/lib/script
 import { ModeSelector, StepIndicator, WriterTitle } from "./components";
 import type { WriterMode, WriterStep, OutlineVersion, ReferenceItem } from "./types";
 import { createEmptyReference } from "./types";
+import { useSubscription } from "@/hooks/useSubscription";
+import { FeatureGate } from "@/components/subscription";
 
 export default function Writer() {
   const navigate = useNavigate();
@@ -287,10 +289,12 @@ export default function Writer() {
   // Helper to count words
   const countWords = (text: string) => text.trim().split(/\s+/).filter(Boolean).length;
 
-  // Helper to copy text
+  // Helper to copy text (strips section delimiters for clean output)
   const handleCopyText = async (text: string, label: string) => {
     try {
-      await navigator.clipboard.writeText(text);
+      // Strip section delimiter for clean copy
+      const cleanText = text.replace(/\|\|\|SECTION\|\|\|/g, '\n\n').trim();
+      await navigator.clipboard.writeText(cleanText);
       toast({
         title: "Copied",
         description: `${label} copied to clipboard`,
@@ -1067,25 +1071,27 @@ export default function Writer() {
                   <p className="text-xs text-muted-foreground">Approximate length for scaling sections</p>
                 </div>
 
-                <div className="flex items-start space-x-3 pt-2 p-3 bg-muted/30 rounded-xl border border-border/50">
-                  <Checkbox
-                    id="innovation"
-                    checked={allowStructureInnovation}
-                    onCheckedChange={(checked) => setAllowStructureInnovation(checked as boolean)}
-                    className="mt-1"
-                  />
-                  <div className="grid gap-1.5 leading-none">
-                    <Label
-                      htmlFor="innovation"
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
-                      Allow Structure Innovation
-                    </Label>
-                    <p className="text-xs text-muted-foreground leading-snug">
-                      Allow AI to vary the structure by 15-25% for novelty while keeping core DNA elements.
-                    </p>
+                <FeatureGate feature="structure_innovation">
+                  <div className="flex items-start space-x-3 pt-2 p-3 bg-muted/30 rounded-xl border border-border/50">
+                    <Checkbox
+                      id="innovation"
+                      checked={allowStructureInnovation}
+                      onCheckedChange={(checked) => setAllowStructureInnovation(checked as boolean)}
+                      className="mt-1"
+                    />
+                    <div className="grid gap-1.5 leading-none">
+                      <Label
+                        htmlFor="innovation"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        Allow Structure Innovation
+                      </Label>
+                      <p className="text-xs text-muted-foreground leading-snug">
+                        Allow AI to vary the structure by 15-25% for novelty while keeping core DNA elements.
+                      </p>
+                    </div>
                   </div>
-                </div>
+                </FeatureGate>
               </GlassCardContent>
             </GlassCard>
           </div>
@@ -1131,30 +1137,32 @@ export default function Writer() {
                       <div className="flex items-center justify-between">
                         <Label>Your Unique Angle</Label>
                         <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={async () => {
-                              if (!topic) {
-                                toast({ title: "Enter a topic first", variant: "destructive" });
-                                return;
-                              }
-                              setSuggestingAngle(true);
-                              const dnaObj = selectedDna && selectedDna !== "none" ? dnas.find(d => d.id === selectedDna) : null;
-                              const personaObj = selectedPersona && selectedPersona !== "none" ? personas.find(p => p.id === selectedPersona) : null;
-                              const angles = await suggestUniqueAngle(topic, dnaObj, personaObj, outlineModel);
-                              if (angles.length > 0) {
-                                setUniqueAngle(angles.map((a, i) => `${i + 1}. ${a.angle}`).join('\n\n'));
-                                toast({ title: `${angles.length} angles suggested!` });
-                              }
-                              setSuggestingAngle(false);
-                            }}
-                            disabled={suggestingAngle || !topic}
-                            className="h-7 text-xs gap-1"
-                          >
-                            {suggestingAngle ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                            AI Suggest
-                          </Button>
+                          <FeatureGate feature="ai_suggest_angle" hideCompletely>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={async () => {
+                                if (!topic) {
+                                  toast({ title: "Enter a topic first", variant: "destructive" });
+                                  return;
+                                }
+                                setSuggestingAngle(true);
+                                const dnaObj = selectedDna && selectedDna !== "none" ? dnas.find(d => d.id === selectedDna) : null;
+                                const personaObj = selectedPersona && selectedPersona !== "none" ? personas.find(p => p.id === selectedPersona) : null;
+                                const angles = await suggestUniqueAngle(topic, dnaObj, personaObj, outlineModel);
+                                if (angles.length > 0) {
+                                  setUniqueAngle(angles.map((a, i) => `${i + 1}. ${a.angle}`).join('\n\n'));
+                                  toast({ title: `${angles.length} angles suggested!` });
+                                }
+                                setSuggestingAngle(false);
+                              }}
+                              disabled={suggestingAngle || !topic}
+                              className="h-7 text-xs gap-1"
+                            >
+                              {suggestingAngle ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                              AI Suggest
+                            </Button>
+                          </FeatureGate>
                           <WordCount text={uniqueAngle} />
                         </div>
                       </div>
@@ -1184,32 +1192,34 @@ export default function Writer() {
                       <div className="flex items-center justify-between">
                         <Label>Your Unique Angle (Optional)</Label>
                         <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={async () => {
-                              if (!competitorScript) {
-                                toast({ title: "Paste competitor script first", variant: "destructive" });
-                                return;
-                              }
-                              setSuggestingAngle(true);
-                              const dnaObj = selectedDna && selectedDna !== "none" ? dnas.find(d => d.id === selectedDna) : null;
-                              const personaObj = selectedPersona && selectedPersona !== "none" ? personas.find(p => p.id === selectedPersona) : null;
-                              // Extract topic from competitor script
-                              const inferredTopic = competitorScript.substring(0, 200);
-                              const angles = await suggestUniqueAngle(inferredTopic, dnaObj, personaObj, outlineModel);
-                              if (angles.length > 0) {
-                                setUniqueAngle(angles.map((a, i) => `${i + 1}. ${a.angle}`).join('\n\n'));
-                                toast({ title: `${angles.length} angles suggested!` });
-                              }
-                              setSuggestingAngle(false);
-                            }}
-                            disabled={suggestingAngle || !competitorScript}
-                            className="h-7 text-xs gap-1"
-                          >
-                            {suggestingAngle ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                            AI Suggest
-                          </Button>
+                          <FeatureGate feature="ai_suggest_angle" hideCompletely>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={async () => {
+                                if (!competitorScript) {
+                                  toast({ title: "Paste competitor script first", variant: "destructive" });
+                                  return;
+                                }
+                                setSuggestingAngle(true);
+                                const dnaObj = selectedDna && selectedDna !== "none" ? dnas.find(d => d.id === selectedDna) : null;
+                                const personaObj = selectedPersona && selectedPersona !== "none" ? personas.find(p => p.id === selectedPersona) : null;
+                                // Extract topic from competitor script
+                                const inferredTopic = competitorScript.substring(0, 200);
+                                const angles = await suggestUniqueAngle(inferredTopic, dnaObj, personaObj, outlineModel);
+                                if (angles.length > 0) {
+                                  setUniqueAngle(angles.map((a, i) => `${i + 1}. ${a.angle}`).join('\n\n'));
+                                  toast({ title: `${angles.length} angles suggested!` });
+                                }
+                                setSuggestingAngle(false);
+                              }}
+                              disabled={suggestingAngle || !competitorScript}
+                              className="h-7 text-xs gap-1"
+                            >
+                              {suggestingAngle ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                              AI Suggest
+                            </Button>
+                          </FeatureGate>
                           <WordCount text={uniqueAngle} />
                         </div>
                       </div>
@@ -1669,7 +1679,14 @@ export default function Writer() {
                         placeholder="Notes (optional)..."
                       />
                     ) : section.notes && (
-                      <p className="text-xs text-muted-foreground italic">📝 {section.notes}</p>
+                      <div className="space-y-1">
+                        {section.notes.includes("Unique Angle Integration") && (
+                          <Badge variant="secondary" className="bg-purple-500/10 text-purple-500 border-purple-500/20 mb-1">
+                            ✨ Unique Angle Integrated
+                          </Badge>
+                        )}
+                        <p className="text-xs text-muted-foreground italic">📝 {section.notes}</p>
+                      </div>
                     )}
 
                     {/* Per-section AI rewrite */}

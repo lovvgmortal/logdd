@@ -1,4 +1,5 @@
 import { callOpenRouter, extractJsonFromResponse, ChatMessage } from "./openrouter";
+import { DNA_EXTRACTION_PROMPT, SCAN_PROMPT, DNA_EVOLUTION_PROMPT } from "@/prompts/dna";
 
 // Extended DNA interface matching the detailed analysis UI
 export interface ExtractedDNA {
@@ -14,6 +15,7 @@ export interface ExtractedDNA {
   linguisticFingerprint: {
     personaRole: string;
     toneAnalysis: string;
+    syntaxPatterns?: string;
     signatureKeywords: string[];
   };
 
@@ -28,18 +30,23 @@ export interface ExtractedDNA {
     pacing: string;
   };
 
+  // Emotional Arc (New)
+  emotionalArc?: {
+    section: string;
+    emotion: string;
+  }[];
+
   // Structural Skeleton (Advanced)
   structuralSkeleton: {
     title: string;
-    wordCount: number; // Estimated words
+    wordCount: number;
     tone?: string;
-    pacing?: string; // Linguistic pacing
+    pacing?: string;
     contentFocus?: string;
-    microHook?: string;
     openLoop?: string;
-    viralTriggers?: string;
-    mustInclude?: string[];
+    closesLoop?: string;
     audienceInteraction?: string;
+    antiPattern?: string;
     audienceValue?: string;
     transitionOut?: string;
   }[];
@@ -74,75 +81,6 @@ export interface ExtractedDNA {
   x_factors?: string[];
 }
 
-const DNA_EXTRACTION_PROMPT = `You are an expert viral content DNA analyst using the "LOG" (Law of Gravity) methodology. 
-
-Your Logic:
-1.  **Analyze Viral Content**: Identify what consistently grabs attention and retains viewers.
-2.  **Analyze Flop Content**: Identify why similar content failed (boring hooks, bad pacing, lack of payoff).
-3.  **Contrast & Extract**: The "DNA" is the difference between the two. The X-Factors are elements present in Viral but absent or done poorly in Flop.
-
-CONTEXT: The output script is for a VOICEOVER (Audio/Text only). **Pacing refers to the linguistic rhythm (sentence length, breath patterns, speed of delivery), NOT visual editing.**
-
-Extract the complete "DNA" from the provided content (transcript, comments, title, etc).
-
-Analyze and output a JSON with this EXACT structure:
-
-{
-  "name": "Suggested DNA name (e.g., 'The Financial Realist's Method')",
-  "niche": "Content niche/category (e.g., Health & Fitness, Crypto, Gaming)",
-  "targetWordCount": 3316,
-  
-  "audiencePsychology": "2-3 sentences describing the audience's emotional state, fears, desires...",
-  
-  "linguisticFingerprint": {
-    "personaRole": "The persona/role the speaker adopts",
-    "toneAnalysis": "Detailed tone analysis",
-    "signatureKeywords": ["keyword1", "keyword2"]
-  },
-  
-  "hookAngle": {
-    "angleCategory": "Hook angle type",
-    "deconstruction": "Psychological explanation"
-  },
-  
-  "pacingAndTone": {
-    "pacing": "Global detailed pacing analysis (sentence rhythm, delivery speed)"  },
-  
-  "structuralSkeleton": [
-    {
-      "title": "Section Name (e.g., Hook)",
-      "wordCount": 150, // Approx words in this section
-      "tone": "Specific tone for this section (e.g. Urgent, Inquisitive)",
-      "pacing": "LINGUISTIC PACING & CONTRAST: Describe the mix of sentence lengths. NEVER be monotone. (e.g. 'Staccato short sentences [90%] ending with one long flow sentence [10%] for impact', or 'Long lyrical sentences broken by a single word punch').",
-// ... (previous prompt content)
-120:       "contentFocus": "ABSTRACT FORMULA of what happens here (e.g., 'Describe a catastrophic failure' NOT 'Describe John crashing his car'). GENERALIZE the events into a reusable formula.",
-// ... (rest of prompt)
-      "microHook": "Strategies for first 5s of this section (Optional)",
-      "openLoop": "Curiosity gap opened here (Optional)",
-      "viralTriggers": "Specific element causing engagement (Optional)",
-      "mustInclude": ["Sound effect", "Visual metaphor"],
-      "audienceInteraction": "CTA or engagement prompt (Optional)",
-      "audienceValue": "What value does the viewer get? (Mandatory)",
-      "transitionOut": "How to transition to next section (Optional)"
-    }
-  ],
-  
-  "highDopamine": ["Element 1"],
-  "confusionPoints": ["Point 1"],
-  "objections": ["Objection 1"],
-  "corePatterns": ["Pattern 1"],
-  "viralXFactors": ["X-Factor 1"],
-  "flopAvoidance": ["Avoid 1"]
-}
-
-IMPORTANT:
-- Analyze ALL provided inputs (transcript, comments, title, notes)
-- Use comments to understand what resonated with audience
-- Be specific and actionable in your analysis
-- Keep descriptions detailed but concise
-- For structuralSkeleton: Extract the ACTUAL structure from the transcript. Calculate the "wordCount" based on the actual transcript length. Pacing must be about WRITING STYLE and DELIVERY SPEED, not video editing.
-- Global tone is in linguisticFingerprint.toneAnalysis. Section-specific tone goes in structuralSkeleton[i].tone.`;
-
 export interface ExtractionInput {
   viralVideos: {
     title: string;
@@ -174,17 +112,7 @@ export interface ContentScanResult {
 }
 
 // Prompt for Pre-Scan (Fast/Cheap)
-const SCAN_PROMPT = `You are a Content Auditor. Scan the following video transcripts/comments.
-For EACH video, determine:
-1. Topic/Niche (1-2 words)
-2. Primary Tone (1 adjective)
-3. Quality Score (0-100 based on clarity and value)
-4. Is it an "Outlier"? (True if it deviates significantly in Topic or Tone from the majority of the group)
-
-Output JSON array:
-[
-  { "index": 0, "type": "viral", "topic": "...", "tone": "...", "qualityScore": 85, "isOutlier": false, "reason": "..." }
-]`;
+// SCAN_PROMPT is imported from @/prompts/dna
 
 export const scanContent = async (
   input: ExtractionInput,
@@ -286,44 +214,37 @@ export const extractDnaFromContent = async (
     batchResults.push(extractJsonFromResponse(response));
   }
 
-  // 3. Aggregation (Merge Batch Results)
-  // For now, we take the most "detailed" result or average them.
-  // Simple heuristic: The result with the longest structuralSkeleton is likely the most detailed.
-  // Ideally, we'd have a separate "Merge" prompt, but for now we pick the 'best' candidate.
-
-  const bestResult = batchResults.reduce((prev, current) => {
-    return (current.structuralSkeleton?.length || 0) > (prev.structuralSkeleton?.length || 0) ? current : prev;
-  }, batchResults[0]);
-
-  // Force the calculated average word count
-  bestResult.targetWordCount = avgWordCount;
+  // 3. Aggregation (Intelligent Merge)
+  // Merge all batch results using consensus-based algorithm
+  const mergedResult = mergeBatchResults(batchResults, avgWordCount);
 
   return {
-    name: bestResult.name || "Extracted DNA",
-    niche: bestResult.niche || "",
-    targetWordCount: bestResult.targetWordCount,
-    audiencePsychology: bestResult.audiencePsychology || "",
-    linguisticFingerprint: bestResult.linguisticFingerprint || { personaRole: "", toneAnalysis: "", signatureKeywords: [] },
-    hookAngle: bestResult.hookAngle || { angleCategory: "", deconstruction: "" },
-    pacingAndTone: bestResult.pacingAndTone || { pacing: "", tone: "" },
-    structuralSkeleton: bestResult.structuralSkeleton || [],
-    highDopamine: bestResult.highDopamine || [],
-    confusionPoints: bestResult.confusionPoints || [],
-    objections: bestResult.objections || [],
-    corePatterns: bestResult.corePatterns || [],
-    viralXFactors: bestResult.viralXFactors || [],
-    flopAvoidance: bestResult.flopAvoidance || [],
+    name: mergedResult.name || "Extracted DNA",
+    niche: mergedResult.niche || "",
+    targetWordCount: mergedResult.targetWordCount,
+    audiencePsychology: mergedResult.audiencePsychology || "",
+    linguisticFingerprint: mergedResult.linguisticFingerprint || { personaRole: "", toneAnalysis: "", signatureKeywords: [] },
+    hookAngle: mergedResult.hookAngle || { angleCategory: "", deconstruction: "" },
+    pacingAndTone: mergedResult.pacingAndTone || { pacing: "", tone: "" },
+    emotionalArc: mergedResult.emotionalArc || [],
+    structuralSkeleton: mergedResult.structuralSkeleton || [],
+    highDopamine: mergedResult.highDopamine || [],
+    confusionPoints: mergedResult.confusionPoints || [],
+    objections: mergedResult.objections || [],
+    corePatterns: mergedResult.corePatterns || [],
+    viralXFactors: mergedResult.viralXFactors || [],
+    flopAvoidance: mergedResult.flopAvoidance || [],
 
     // Legacy mapping
-    tone: bestResult.pacingAndTone?.tone || "",
-    patterns: bestResult.corePatterns || [],
-    vocabulary: bestResult.linguisticFingerprint?.signatureKeywords?.join(", ") || "",
-    hook_type: bestResult.hookAngle?.angleCategory || "",
+    tone: mergedResult.pacingAndTone?.tone || "",
+    patterns: mergedResult.corePatterns || [],
+    vocabulary: mergedResult.linguisticFingerprint?.signatureKeywords?.join(", ") || "",
+    hook_type: mergedResult.hookAngle?.angleCategory || "",
     hook_examples: [],
-    structure: bestResult.structuralSkeleton?.map((s: any) => s.title) || [],
-    pacing: bestResult.pacingAndTone?.pacing || "",
-    retention_tactics: bestResult.highDopamine || [],
-    x_factors: bestResult.viralXFactors || [],
+    structure: mergedResult.structuralSkeleton?.map((s: any) => s.title) || [],
+    pacing: mergedResult.pacingAndTone?.pacing || "",
+    retention_tactics: mergedResult.highDopamine || [],
+    x_factors: mergedResult.viralXFactors || [],
   };
 };
 
@@ -362,41 +283,148 @@ export interface LearningHistoryEntry {
   changes_made: string[];
 }
 
-const DNA_EVOLUTION_PROMPT = `You are a DNA Evolution AI. Your job is to REFINE an existing Content DNA by learning from new video content.
+// ============================================================================
+// INTELLIGENT BATCH MERGING - Combine insights from multiple DNA extractions
+// ============================================================================
 
-You are NOT simply adding new items to lists. You are LEARNING and GENERALIZING.
+/**
+ * Merge multiple DNA extraction results intelligently
+ * Strategy: Prioritize patterns that appear in multiple batches (consensus)
+ */
+const mergeBatchResults = (batchResults: any[], avgWordCount: number): any => {
+  if (batchResults.length === 0) {
+    throw new Error("No batch results to merge");
+  }
 
-CRITICAL RULES:
-1. LEARN new patterns, hooks, tactics from viral videos
-2. LEARN what to avoid from flop videos
-3. COMPARE new insights with existing DNA patterns
-4. MERGE similar patterns (don't create duplicates)
-5. REPLACE weak/specific patterns with stronger/general ones
-6. REMOVE redundant or conflicting patterns
-7. **NO HARD LIMITS** - Keep what's valuable, quality over quantity
-8. GENERALIZE - Extract principles, not just copy specific examples
-9. If new content contradicts existing DNA, evaluate which is stronger and keep that
+  if (batchResults.length === 1) {
+    return { ...batchResults[0], targetWordCount: avgWordCount };
+  }
 
-EVOLUTION LOGIC:
-- If a new pattern is similar to an existing one → MERGE into one stronger pattern
-- If a new pattern is clearly better → REPLACE the weak one
-- If a new pattern is unique and valuable → ADD it  
-- If existing patterns are now redundant → REMOVE them
-- Hook examples: Prioritize newer ones but max 4-5 total (quality over quantity)
+  // Helper: Count frequency of items across batches
+  const mergeArraysByFrequency = (arrays: string[][], minFrequency = 0.5): string[] => {
+    const itemCount = new Map<string, number>();
+    const totalBatches = arrays.length;
 
-OUTPUT must be valid JSON:
-{
-  "evolvedDna": {
-    // Complete updated DNA with all fields
-  },
-  "changesSummary": [
-    // List of changes made, e.g.:
-    // "Merged 'X pattern' and 'Y pattern' into 'Z pattern'",
-    // "Replaced weak hook example with stronger one from viral #2",
-    // "Added 'new insight' to flopAvoidance",
-    // "Removed redundant item from corePatterns"
-  ]
-}`;
+    arrays.forEach(arr => {
+      if (!arr) return;
+      const uniqueItems = [...new Set(arr)];
+      uniqueItems.forEach(item => {
+        itemCount.set(item, (itemCount.get(item) || 0) + 1);
+      });
+    });
+
+    // Filter by frequency threshold and sort by frequency
+    return Array.from(itemCount.entries())
+      .filter(([_, count]) => count / totalBatches >= minFrequency)
+      .sort((a, b) => b[1] - a[1])
+      .map(([item]) => item);
+  };
+
+  // Helper: Merge structural skeletons - find consensus structure
+  const mergeStructuralSkeletons = (skeletons: any[][]): any[] => {
+    if (!skeletons || skeletons.length === 0) return [];
+
+    // Use the skeleton with median length as base
+    const validSkeletons = skeletons.filter(s => s && s.length > 0);
+    if (validSkeletons.length === 0) return [];
+
+    validSkeletons.sort((a, b) => a.length - b.length);
+    const medianSkeleton = validSkeletons[Math.floor(validSkeletons.length / 2)];
+
+    // Enhance with insights from other skeletons
+    return medianSkeleton.map((section, idx) => {
+      // Collect all sections at this index from other skeletons
+      const equivalentSections = validSkeletons
+        .map(skel => skel[idx])
+        .filter(Boolean);
+
+      // Average word counts
+      const wordCounts = equivalentSections.map(s => s.wordCount || 0).filter(wc => wc > 0);
+      const avgWordCount = wordCounts.length > 0
+        ? Math.round(wordCounts.reduce((a, b) => a + b, 0) / wordCounts.length)
+        : section.wordCount;
+
+      return {
+        ...section,
+        wordCount: avgWordCount
+      };
+    });
+  };
+
+  // Helper: Pick most detailed non-empty string
+  const pickBestString = (strings: (string | undefined)[]): string => {
+    const valid = strings.filter(s => s && s.trim().length > 0);
+    if (valid.length === 0) return "";
+    // Pick longest as it's likely most detailed
+    return valid.reduce((longest, current) =>
+      current.length > longest.length ? current : longest
+    );
+  };
+
+  // Extract arrays for merging
+  const allCorePatterns = batchResults.map(r => r.corePatterns).filter(Boolean);
+  const allViralXFactors = batchResults.map(r => r.viralXFactors).filter(Boolean);
+  const allFlopAvoidance = batchResults.map(r => r.flopAvoidance).filter(Boolean);
+  const allHighDopamine = batchResults.map(r => r.highDopamine).filter(Boolean);
+  const allConfusionPoints = batchResults.map(r => r.confusionPoints).filter(Boolean);
+  const allObjections = batchResults.map(r => r.objections).filter(Boolean);
+  const allStructuralSkeletons = batchResults.map(r => r.structuralSkeleton).filter(Boolean);
+
+  // Merge with frequency threshold (appear in 50%+ of batches)
+  const merged = {
+    // Pick best name and niche (most detailed)
+    name: pickBestString(batchResults.map(r => r.name)),
+    niche: pickBestString(batchResults.map(r => r.niche)),
+    targetWordCount: avgWordCount,
+
+    // Pick best detailed explanations (longest = most detailed)
+    audiencePsychology: pickBestString(batchResults.map(r => r.audiencePsychology)),
+
+    // Linguistic Fingerprint - merge keywords, pick best analysis
+    linguisticFingerprint: {
+      personaRole: pickBestString(batchResults.map(r => r.linguisticFingerprint?.personaRole)),
+      toneAnalysis: pickBestString(batchResults.map(r => r.linguisticFingerprint?.toneAnalysis)),
+      syntaxPatterns: pickBestString(batchResults.map(r => r.linguisticFingerprint?.syntaxPatterns)),
+      signatureKeywords: mergeArraysByFrequency(
+        batchResults.map(r => r.linguisticFingerprint?.signatureKeywords).filter(Boolean),
+        0.4 // 40% threshold for keywords (more lenient)
+      )
+    },
+
+    // Hook Angle - pick most detailed
+    hookAngle: batchResults
+      .map(r => r.hookAngle)
+      .filter(h => h && h.deconstruction)
+      .sort((a, b) => (b.deconstruction?.length || 0) - (a.deconstruction?.length || 0))[0] ||
+      { angleCategory: "", deconstruction: "" },
+
+    // Pacing - consensus or most common
+    pacingAndTone: {
+      pacing: pickBestString(batchResults.map(r => r.pacingAndTone?.pacing))
+    },
+
+    // Emotional Arc - pick from most detailed result
+    emotionalArc: batchResults
+      .map(r => r.emotionalArc)
+      .filter(e => e && e.length > 0)
+      .sort((a, b) => b.length - a.length)[0] || [],
+
+    // Structural Skeleton - merge intelligently
+    structuralSkeleton: mergeStructuralSkeletons(allStructuralSkeletons),
+
+    // Array merging - prioritize patterns appearing in multiple batches
+    corePatterns: mergeArraysByFrequency(allCorePatterns, 0.5), // 50%+ batches
+    viralXFactors: mergeArraysByFrequency(allViralXFactors, 0.4), // 40%+ (more lenient for unique factors)
+    flopAvoidance: mergeArraysByFrequency(allFlopAvoidance, 0.5), // 50%+ batches
+    highDopamine: mergeArraysByFrequency(allHighDopamine, 0.5),
+    confusionPoints: mergeArraysByFrequency(allConfusionPoints, 0.3), // Lower threshold for warnings
+    objections: mergeArraysByFrequency(allObjections, 0.4)
+  };
+
+  return merged;
+};
+
+// DNA_EVOLUTION_PROMPT is imported from @/prompts/dna
 
 export const evolveDna = async (
   existingDna: ExtractedDNA,

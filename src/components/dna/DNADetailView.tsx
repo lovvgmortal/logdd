@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { GlassCard, GlassCardContent } from "@/components/ui/glass-card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { DNA, DNAAnalysisData } from "@/hooks/useDnas";
+import { FeatureGate } from "@/components/subscription";
 
 interface DNADetailViewProps {
   dna: DNA;
@@ -112,14 +113,16 @@ export function DNADetailView({ dna, onBack, onUpdate, onExport, onEvolve }: DNA
           />
           <div className="flex gap-2">
             {onEvolve && (
-              <Button
-                variant="outline"
-                onClick={() => setShowEvolution(!showEvolution)}
-                className="gap-2 border-green-500/50 text-green-500 hover:bg-green-500/10"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Evolve DNA
-              </Button>
+              <FeatureGate feature="dna_evolution" hideCompletely>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowEvolution(!showEvolution)}
+                  className="gap-2 border-green-500/50 text-green-500 hover:bg-green-500/10"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Evolve DNA
+                </Button>
+              </FeatureGate>
             )}
             <Button variant="outline" onClick={() => onExport(editedDna)} className="gap-2">
               <Download className="h-4 w-4" />
@@ -424,6 +427,41 @@ export function DNADetailView({ dna, onBack, onUpdate, onExport, onEvolve }: DNA
 
           {/* Right Column */}
           <div className="space-y-4">
+            {/* Emotional Arc (New) */}
+            <GlassCard>
+              <GlassCardContent className="p-4 space-y-4">
+                <Label className="text-xs uppercase text-pink-500 flex items-center gap-1.5">
+                  <Sparkles className="h-3 w-3" /> Emotional Arc
+                </Label>
+
+                <div className="flex items-center gap-2 overflow-x-auto pb-2">
+                  {(editedDna.analysis_data?.emotionalArc || []).map((arc, index) => (
+                    <div key={index} className="flex-shrink-0 flex items-center">
+                      <div className="bg-pink-500/10 border border-pink-500/20 rounded-lg p-3 min-w-[120px] text-center space-y-1">
+                        <div className="text-[10px] uppercase text-muted-foreground">{arc.section}</div>
+                        <div className="text-sm font-medium text-pink-500">{arc.emotion}</div>
+                      </div>
+                      {index < (editedDna.analysis_data?.emotionalArc?.length || 0) - 1 && (
+                        <div className="w-8 h-[2px] bg-muted mx-2"></div>
+                      )}
+                    </div>
+                  ))}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-full ml-2 border border-dashed"
+                    onClick={() => {
+                      const newArc = [...(editedDna.analysis_data?.emotionalArc || [])];
+                      newArc.push({ section: "New Phase", emotion: "Emotion" });
+                      updateAnalysisField("emotionalArc", newArc);
+                    }}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </GlassCardContent>
+            </GlassCard>
+
             {/* Structural Skeleton */}
             <GlassCard>
               <GlassCardContent className="p-4 space-y-3">
@@ -536,80 +574,57 @@ export function DNADetailView({ dna, onBack, onUpdate, onExport, onEvolve }: DNA
                           />
                         </div>
 
-                        {/* Row 4: Advanced Fields (Micro Hook, Open Loop) */}
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-1.5">
-                            <Label className="text-[10px] uppercase text-muted-foreground">Micro Hook (First 5s)</Label>
-                            <Input
-                              value={section.microHook || ""}
-                              onChange={(e) => {
-                                const newSkeleton = [...(editedDna.analysis_data?.structuralSkeleton || [])];
-                                newSkeleton[index] = { ...section, microHook: e.target.value };
-                                updateAnalysisField("structuralSkeleton", newSkeleton);
-                              }}
-                              className="h-8 bg-muted/30 text-xs"
-                              placeholder="Mini-hook strategy..."
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label className="text-[10px] uppercase text-muted-foreground">Open Loop (Optional)</Label>
-                            <Input
-                              value={section.openLoop || ""}
-                              onChange={(e) => {
-                                const newSkeleton = [...(editedDna.analysis_data?.structuralSkeleton || [])];
-                                newSkeleton[index] = { ...section, openLoop: e.target.value };
-                                updateAnalysisField("structuralSkeleton", newSkeleton);
-                              }}
-                              className="h-8 bg-muted/30 text-xs"
-                              placeholder="Curiosity gap..."
-                            />
-                          </div>
-                        </div>
 
-                        {/* Row 5: Viral Triggers */}
-                        <div className="space-y-1.5">
-                          <Label className="text-[10px] uppercase text-muted-foreground">Viral Trigger (Optional)</Label>
-                          <Input
-                            value={section.viralTriggers || ""}
-                            onChange={(e) => {
-                              const newSkeleton = [...(editedDna.analysis_data?.structuralSkeleton || [])];
-                              newSkeleton[index] = { ...section, viralTriggers: e.target.value };
-                              updateAnalysisField("structuralSkeleton", newSkeleton);
-                            }}
-                            className="h-8 bg-muted/30 text-xs"
-                            placeholder="Specific element..."
-                          />
-                        </div>
 
                         {/* Row 6: Must Include */}
-                        <div className="space-y-1.5">
-                          <Label className="text-[10px] uppercase text-muted-foreground">Must Include Elements (Comma Separated)</Label>
-                          <Input
-                            value={(section.mustInclude || []).join(", ")}
-                            onChange={(e) => {
-                              const newSkeleton = [...(editedDna.analysis_data?.structuralSkeleton || [])];
-                              newSkeleton[index] = { ...section, mustInclude: e.target.value.split(",").map(s => s.trim()) };
-                              updateAnalysisField("structuralSkeleton", newSkeleton);
-                            }}
-                            className="h-8 bg-muted/30 text-xs"
-                            placeholder="e.g. Sound effect, Visual metaphor"
-                          />
-                        </div>
+
 
                         {/* Row 7: Audience Interaction & Value */}
                         <div className="space-y-4">
                           <div className="space-y-1.5">
-                            <Label className="text-[10px] uppercase text-muted-foreground">Audience Interaction / CTA (Optional)</Label>
-                            <Input
-                              value={section.audienceInteraction || ""}
-                              onChange={(e) => {
-                                const newSkeleton = [...(editedDna.analysis_data?.structuralSkeleton || [])];
-                                newSkeleton[index] = { ...section, audienceInteraction: e.target.value };
-                                updateAnalysisField("structuralSkeleton", newSkeleton);
-                              }}
-                              className="h-8 bg-muted/30 text-xs"
-                              placeholder="Specific CTA or engagement prompt..."
-                            />
+                            {/* Row 4: Loops & Interaction */}
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-1.5">
+                                <Label className="text-[10px] uppercase text-muted-foreground">Open Loop (Optional)</Label>
+                                <Input
+                                  value={section.openLoop || ""}
+                                  onChange={(e) => {
+                                    const newSkeleton = [...(editedDna.analysis_data?.structuralSkeleton || [])];
+                                    newSkeleton[index] = { ...section, openLoop: e.target.value };
+                                    updateAnalysisField("structuralSkeleton", newSkeleton);
+                                  }}
+                                  className="h-8 bg-muted/30 text-xs"
+                                  placeholder="Curiosity gap..."
+                                />
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label className="text-[10px] uppercase text-muted-foreground">Closes Loop (Optional)</Label>
+                                <Input
+                                  value={section.closesLoop || ""}
+                                  onChange={(e) => {
+                                    const newSkeleton = [...(editedDna.analysis_data?.structuralSkeleton || [])];
+                                    newSkeleton[index] = { ...section, closesLoop: e.target.value };
+                                    updateAnalysisField("structuralSkeleton", newSkeleton);
+                                  }}
+                                  className="h-8 bg-muted/30 text-xs"
+                                  placeholder="Reference closed loop..."
+                                />
+                              </div>
+                            </div>
+
+                            <div className="space-y-1.5">
+                              <Label className="text-[10px] uppercase text-muted-foreground">Audience Interaction / CTA (Mandatory)</Label>
+                              <Input
+                                value={section.audienceInteraction || ""}
+                                onChange={(e) => {
+                                  const newSkeleton = [...(editedDna.analysis_data?.structuralSkeleton || [])];
+                                  newSkeleton[index] = { ...section, audienceInteraction: e.target.value };
+                                  updateAnalysisField("structuralSkeleton", newSkeleton);
+                                }}
+                                className="h-8 bg-muted/30 text-xs border-green-500/30"
+                                placeholder="Explicit CTA or implicit trigger..."
+                              />
+                            </div>
                           </div>
 
                           <div className="space-y-1.5">
@@ -625,6 +640,21 @@ export function DNADetailView({ dna, onBack, onUpdate, onExport, onEvolve }: DNA
                               placeholder="What value does the viewer get? (Mandatory)"
                             />
                           </div>
+                        </div>
+
+                        {/* Row 8: Anti-Pattern (New) */}
+                        <div className="space-y-1.5">
+                          <Label className="text-[10px] uppercase text-red-400">Anti-Pattern (Mistake to Avoid)</Label>
+                          <Input
+                            value={section.antiPattern || ""}
+                            onChange={(e) => {
+                              const newSkeleton = [...(editedDna.analysis_data?.structuralSkeleton || [])];
+                              newSkeleton[index] = { ...section, antiPattern: e.target.value };
+                              updateAnalysisField("structuralSkeleton", newSkeleton);
+                            }}
+                            className="h-8 bg-red-500/10 border-red-500/30 text-xs"
+                            placeholder="Specific mistake to avoid here..."
+                          />
                         </div>
 
                       </CollapsibleContent>

@@ -10,6 +10,7 @@ export interface DNAAnalysisData {
   linguisticFingerprint?: {
     personaRole: string;
     toneAnalysis: string;
+    syntaxPatterns?: string;
     signatureKeywords: string[];
   };
   hookAngle?: {
@@ -19,19 +20,20 @@ export interface DNAAnalysisData {
   pacingAndTone?: {
     pacing: string;
   };
+  emotionalArc?: {
+    section: string;
+    emotion: string;
+  }[];
   structuralSkeleton?: {
     title: string;
     wordCount: number;
-    timing?: string; // Optional legacy or reference
-    wordRange?: string; // Optional legacy
     tone?: string;
     pacing?: string;
     contentFocus?: string;
-    microHook?: string;
     openLoop?: string;
-    viralTriggers?: string;
-    mustInclude?: string[];
+    closesLoop?: string;
     audienceInteraction?: string;
+    antiPattern?: string;
     audienceValue?: string;
     transitionOut?: string;
   }[];
