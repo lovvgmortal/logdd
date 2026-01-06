@@ -26,6 +26,10 @@ const FEATURE_INFO: Record<FeatureName, { name: string; description: string }> =
         name: "Flop Analysis",
         description: "Analyze failed videos to avoid similar mistakes",
     },
+    tubeclone: {
+        name: "TubeClone",
+        description: "Replicate success patterns from top-performing videos",
+    },
 };
 
 const TIER_DISPLAY: Record<SubscriptionTier, { name: string; color: string }> = {
