@@ -164,6 +164,16 @@ export default function Writer() {
         if (script.full_script) steps.push("script");
         setCompletedSteps(steps);
 
+        // Load model selections from script (ONLY on initial load)
+        if (!hasInitializedRef.current) {
+          if (script.outline_model) {
+            setOutlineModel(script.outline_model);
+          }
+          if (script.script_model) {
+            setScriptModel(script.script_model);
+          }
+        }
+
         // Only set step on FIRST load, not on subsequent re-renders
         if (!hasInitializedRef.current) {
           hasInitializedRef.current = true;
@@ -379,7 +389,9 @@ export default function Writer() {
             full_script: null,
             score: null,
             score_breakdown: null,
-            outline_history: finalOutlineHistory
+            outline_history: finalOutlineHistory,
+            outline_model: outlineModel,
+            script_model: scriptModel
           });
         }
       }
@@ -461,7 +473,9 @@ export default function Writer() {
             full_script: result,
             status: "done",
             script_history: finalScriptHistory,
-            blueprint_content: outline as any // Save the outline used to generate this script
+            blueprint_content: outline as any,
+            outline_model: outlineModel,
+            script_model: scriptModel
           });
           toast({
             title: "Script Complete",
@@ -549,17 +563,22 @@ export default function Writer() {
       setCurrentStep("outline");
     } else if (currentStep === "outline") {
       setCurrentStep("input");
-    } else {
+    } else if (currentStep === "input") {
+      // Only reset everything when going from input back to mode selection
       setWriterMode("select");
       setOutline(null);
       setOutlineHistory([]);
       setCurrentOutlineVersionId(null);
       setGeneratedScript("");
       setScriptScore(null);
-      setCurrentStep("input");
       setCompletedSteps(["input"]);
       setCurrentScriptId(null);
       setProjectTitle("New Script");
+      // Reset input fields
+      setTopic("");
+      setKeyPoints("");
+      setUniqueAngle("");
+      setCompetitorScript("");
       navigate("/writer");
     }
   };
