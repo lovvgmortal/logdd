@@ -3,160 +3,156 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
+import { useSubscription } from "@/hooks/useSubscription";
+
 const plans = [{
   name: "Starter",
-  description: "Perfect for beginners exploring content creation",
+  tier: "starter" as const,
+  description: "Basic features to get started",
   price: "$20",
-  period: "forever",
+  period: "/month",
   icon: Sparkles,
   popular: false,
   features: [{
-    name: "3 DNA extractions/month",
+    name: "Extract DNA from 1 video",
     included: true
   }, {
-    name: "5 script generations/month",
+    name: "Basic script generation",
     included: true
   }, {
-    name: "2 personas",
+    name: "2 Personas",
     included: true
   }, {
-    name: "Basic templates",
+    name: "7-day version history",
     included: true
   }, {
-    name: "Community support",
-    included: true
-  }, {
-    name: "Version history (7 days)",
-    included: true
-  }, {
-    name: "Priority support",
+    name: "DNA Evolution",
     included: false
   }, {
-    name: "Advanced analytics",
+    name: "AI Suggest Angle",
     included: false
   }, {
-    name: "Team collaboration",
+    name: "Batch DNA (multiple videos)",
+    included: false
+  }, {
+    name: "Structure Innovation",
+    included: false
+  }, {
+    name: "Flop Avoidance Analysis",
     included: false
   }]
 }, {
   name: "Pro",
-  description: "For serious content creators who want more power",
+  tier: "pro" as const,
+  description: "Unlock all advanced AI features",
   price: "$59",
   period: "/month",
   icon: Zap,
   popular: true,
   features: [{
-    name: "Unlimited DNA extractions",
+    name: "Extract DNA from multiple videos",
     included: true
   }, {
-    name: "Unlimited script generations",
+    name: "Unlimited scripts",
     included: true
   }, {
-    name: "Unlimited personas",
+    name: "Unlimited Personas",
     included: true
   }, {
-    name: "Premium templates",
+    name: "Unlimited version history",
     included: true
   }, {
-    name: "Priority email support",
+    name: "DNA Evolution",
     included: true
   }, {
-    name: "Version history (unlimited)",
+    name: "AI Suggest Angle",
     included: true
   }, {
-    name: "Priority support",
+    name: "Batch DNA (multiple videos)",
     included: true
   }, {
-    name: "Advanced analytics",
+    name: "Structure Innovation",
     included: true
   }, {
-    name: "Team collaboration",
-    included: false
+    name: "Flop Avoidance Analysis",
+    included: true
   }]
 }, {
-  name: "Enterprise",
-  description: "For teams and agencies scaling content production",
-  price: "$419",
+  name: "Ultra",
+  tier: "ultra" as const,
+  description: "Everything in Pro + Future features",
+  price: "$99",
   period: "/month",
   icon: Crown,
   popular: false,
   features: [{
-    name: "Everything in Pro",
+    name: "All Pro features",
     included: true
   }, {
-    name: "Team workspaces",
+    name: "Early access to new features",
     included: true
   }, {
-    name: "Unlimited team members",
+    name: "24/7 Priority support",
     included: true
   }, {
-    name: "Custom templates",
+    name: "Premium Templates (coming soon)",
     included: true
   }, {
-    name: "Dedicated account manager",
-    included: true
-  }, {
-    name: "Version history (unlimited)",
-    included: true
-  }, {
-    name: "Priority support (24/7)",
-    included: true
-  }, {
-    name: "Advanced analytics + reports",
-    included: true
-  }, {
-    name: "Team collaboration",
-    included: true
-  }, {
-    name: "API access",
+    name: "Team Collaboration (coming soon)",
     included: true
   }]
 }];
+
 const comparisonFeatures = [{
-  name: "DNA Extractions",
-  starter: "3/month",
-  pro: "Unlimited",
-  enterprise: "Unlimited"
+  name: "DNA Extraction",
+  starter: "1 video",
+  pro: "Multiple videos",
+  ultra: "Multiple videos"
 }, {
   name: "Script Generations",
-  starter: "5/month",
+  starter: "Basic",
   pro: "Unlimited",
-  enterprise: "Unlimited"
+  ultra: "Unlimited"
 }, {
   name: "Personas",
   starter: "2",
   pro: "Unlimited",
-  enterprise: "Unlimited"
+  ultra: "Unlimited"
 }, {
-  name: "Templates",
-  starter: "Basic",
-  pro: "Premium",
-  enterprise: "Custom"
+  name: "DNA Evolution",
+  starter: "❌",
+  pro: "✅",
+  ultra: "✅"
+}, {
+  name: "AI Suggest Angle",
+  starter: "❌",
+  pro: "✅",
+  ultra: "✅"
+}, {
+  name: "Batch DNA",
+  starter: "❌",
+  pro: "✅",
+  ultra: "✅"
+}, {
+  name: "Structure Innovation",
+  starter: "❌",
+  pro: "✅",
+  ultra: "✅"
+}, {
+  name: "Flop Avoidance Analysis",
+  starter: "❌",
+  pro: "✅",
+  ultra: "✅"
 }, {
   name: "Version History",
   starter: "7 days",
   pro: "Unlimited",
-  enterprise: "Unlimited"
+  ultra: "Unlimited"
 }, {
   name: "Support",
   starter: "Community",
   pro: "Priority Email",
-  enterprise: "24/7 Dedicated"
-}, {
-  name: "Analytics",
-  starter: "Basic",
-  pro: "Advanced",
-  enterprise: "Advanced + Reports"
-}, {
-  name: "Team Members",
-  starter: "1",
-  pro: "1",
-  enterprise: "Unlimited"
-}, {
-  name: "API Access",
-  starter: "—",
-  pro: "—",
-  enterprise: "Full Access"
+  ultra: "24/7 Dedicated"
 }];
 export default function Pricing() {
   const navigate = useNavigate();
@@ -242,7 +238,7 @@ export default function Pricing() {
                 <th className="px-4 py-3 text-left font-medium">Feature</th>
                 <th className="px-4 py-3 text-center font-medium">Starter</th>
                 <th className="px-4 py-3 text-center font-medium text-primary">Pro</th>
-                <th className="px-4 py-3 text-center font-medium">Enterprise</th>
+                <th className="px-4 py-3 text-center font-medium">Ultra</th>
               </tr>
             </thead>
             <tbody>
@@ -250,7 +246,7 @@ export default function Pricing() {
                 <td className="px-4 py-3 font-medium">{feature.name}</td>
                 <td className="px-4 py-3 text-center text-muted-foreground">{feature.starter}</td>
                 <td className="px-4 py-3 text-center">{feature.pro}</td>
-                <td className="px-4 py-3 text-center">{feature.enterprise}</td>
+                <td className="px-4 py-3 text-center">{feature.ultra}</td>
               </tr>)}
             </tbody>
           </table>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Users, Plus, Search, ChevronRight, Brain, Target, MessageCircle, Trash2, Edit, Loader2, Sparkles, Shield, Zap, Youtube, Link as LinkIcon, Download } from "lucide-react";
+import { Users, Plus, Search, ChevronRight, Brain, Target, MessageCircle, Trash2, Edit, Loader2, Sparkles, Shield, Zap, Youtube, Link as LinkIcon, Download, Globe } from "lucide-react";
 import { GlassCard, GlassCardHeader, GlassCardTitle, GlassCardContent, GlassCardDescription } from "@/components/ui/glass-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +46,7 @@ export default function Personas() {
   const [painPoints, setPainPoints] = useState("");
   const [preferredTone, setPreferredTone] = useState("");
   const [platform, setPlatform] = useState("");
+  const [targetCountry, setTargetCountry] = useState("");
   const [description, setDescription] = useState("");
 
   // New Analysis Fields (Multi-source)
@@ -92,6 +93,7 @@ export default function Personas() {
 
     setMotivations("");
     setObjections("");
+    setTargetCountry("");
 
     setEditingPersona(null);
   };
@@ -112,6 +114,7 @@ export default function Personas() {
     setDescription(persona.description || "");
     setMotivations(persona.motivations?.join(", ") || "");
     setObjections(persona.objections?.join(", ") || "");
+    setTargetCountry(persona.target_country || "");
 
     if (persona.content_sources && Array.isArray(persona.content_sources) && persona.content_sources.length > 0) {
       setSources(persona.content_sources);
@@ -170,13 +173,38 @@ export default function Personas() {
         setName(result.name || name);
         setAgeRange(result.ageRange || ageRange);
         setKnowledgeLevel(result.knowledgeLevel || knowledgeLevel);
-        setPainPoints(result.painPoints?.join(", ") || painPoints);
+
+        // Handle painPoints (string[] or object[])
+        if (Array.isArray(result.painPoints)) {
+          const painPointsText = result.painPoints.map(p => typeof p === 'string' ? p : p.text).join(", ");
+          setPainPoints(painPointsText || painPoints);
+        }
+
         setPreferredTone(result.preferredTone || preferredTone);
         setPlatform(result.platform || platform);
+        setTargetCountry(result.targetCountry || targetCountry);
 
-        setMotivations(result.motivations?.join(", ") || motivations);
+        // Handle motivations (string[] or object[])
+        if (Array.isArray(result.motivations)) {
+          const motivationsText = result.motivations.map(m => typeof m === 'string' ? m : m.text).join(", ");
+          setMotivations(motivationsText || motivations);
+        }
 
-        setObjections(result.objections?.join(", ") || objections);
+        // Handle objections (string[] or object[])
+        if (Array.isArray(result.objections)) {
+          const objectionsText = result.objections.map(o => typeof o === 'string' ? o : o.text).join(", ");
+          setObjections(objectionsText || objections);
+        }
+
+        // Store extended fields for saving (we'll add state for these)
+        if (result.knowledgeProfile || result.demographics || result.contentConsumption) {
+          // @ts-ignore - Add to window temporary storage for now
+          window.__tempPersonaExtended = {
+            knowledge_profile: result.knowledgeProfile,
+            demographics: result.demographics,
+            content_consumption: result.contentConsumption
+          };
+        }
       }
     } finally {
       setAnalyzing(false);
@@ -184,10 +212,11 @@ export default function Personas() {
   };
 
   const handleSave = async () => {
-    const personaData = {
+    const personaData: any = {
       name,
       age_range: ageRange || null,
       knowledge_level: knowledgeLevel || null,
+      target_country: targetCountry || null,
       pain_points: painPoints ? painPoints.split(",").map(p => p.trim()).filter(Boolean) : null,
       preferred_tone: preferredTone || null,
       platform: platform || null,
@@ -197,6 +226,19 @@ export default function Personas() {
       content_sources: sources, // Save sources
     };
 
+    // Include extended fields if available (from AI analysis)
+    // @ts-ignore
+    if (window.__tempPersonaExtended) {
+      // @ts-ignore
+      const extended = window.__tempPersonaExtended;
+      if (extended.knowledge_profile) personaData.knowledge_profile = extended.knowledge_profile;
+      if (extended.demographics) personaData.demographics = extended.demographics;
+      if (extended.content_consumption) personaData.content_consumption = extended.content_consumption;
+      // @ts-ignore
+      delete window.__tempPersonaExtended; // Cleanup
+    }
+
+    setSaving(true);
     if (editingPersona) {
       // @ts-ignore - id mismatch?
       await updatePersona(editingPersona.id, personaData);
@@ -215,9 +257,11 @@ export default function Personas() {
 
   const getKnowledgeValue = (level: string | null) => {
     switch (level) {
-      case "beginner": return 33;
-      case "intermediate": return 66;
-      case "advanced": return 100;
+      case "complete-beginner": return 20;
+      case "beginner": return 40;
+      case "intermediate": return 60;
+      case "advanced": return 80;
+      case "expert": return 100;
       default: return 50;
     }
   };
@@ -283,7 +327,14 @@ export default function Personas() {
                 <GlassCardTitle className="mt-3">{persona.name}</GlassCardTitle>
                 <GlassCardDescription>
                   {persona.age_range && `Age ${persona.age_range}`}
-                  {persona.age_range && persona.platform && " • "}
+                  {persona.age_range && (persona.target_country || persona.platform) && " • "}
+                  {persona.target_country && (
+                    <span className="inline-flex items-center gap-1">
+                      <Globe className="h-3 w-3" />
+                      {persona.target_country}
+                    </span>
+                  )}
+                  {persona.target_country && persona.platform && " • "}
                   {persona.platform}
                 </GlassCardDescription>
               </GlassCardHeader>
@@ -303,6 +354,30 @@ export default function Personas() {
                   />
                 </div>
 
+                {/* Knowledge Profile (Extended) */}
+                {persona.knowledge_profile && (
+                  <div className="space-y-2 p-3 rounded-lg bg-primary/5 border border-primary/10">
+                    <span className="text-xs font-semibold text-primary">3D Knowledge Profile</span>
+                    <div className="grid grid-cols-3 gap-2 text-xs">
+                      <div className="text-center">
+                        <div className="font-bold text-lg text-primary">{persona.knowledge_profile.domainKnowledge}</div>
+                        <div className="text-muted-foreground">Domain</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-bold text-lg text-primary">{persona.knowledge_profile.engagementDepth}</div>
+                        <div className="text-muted-foreground">Engagement</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-bold text-lg text-primary">{persona.knowledge_profile.skepticismLevel}</div>
+                        <div className="text-muted-foreground">Skepticism</div>
+                      </div>
+                    </div>
+                    {persona.knowledge_profile.reasoning && (
+                      <p className="text-xs text-muted-foreground italic">{persona.knowledge_profile.reasoning}</p>
+                    )}
+                  </div>
+                )}
+
                 {/* Pain Points */}
                 {persona.pain_points && persona.pain_points.length > 0 && (
                   <div className="space-y-2">
@@ -311,11 +386,22 @@ export default function Personas() {
                       Pain Points
                     </span>
                     <div className="flex flex-wrap gap-1.5">
-                      {persona.pain_points.slice(0, 2).map((point) => (
-                        <span key={point} className="rounded-lg bg-accent px-2 py-1 text-xs font-medium text-accent-foreground">
-                          {point}
-                        </span>
-                      ))}
+                      {persona.pain_points.slice(0, 2).map((point, idx) => {
+                        const text = typeof point === 'string' ? point : point.text;
+                        const intensity = typeof point === 'object' && point.intensity ? point.intensity : null;
+                        return (
+                          <span
+                            key={idx}
+                            className={`rounded-lg px-2 py-1 text-xs font-medium ${intensity === 'high' ? 'bg-red-500/20 text-red-600' :
+                              intensity === 'medium' ? 'bg-orange-500/20 text-orange-600' :
+                                intensity === 'low' ? 'bg-yellow-500/20 text-yellow-600' :
+                                  'bg-accent text-accent-foreground'
+                              }`}
+                          >
+                            {text}
+                          </span>
+                        );
+                      })}
                       {persona.pain_points.length > 2 && (
                         <span className="rounded-lg bg-muted px-2 py-1 text-xs text-muted-foreground">
                           +{persona.pain_points.length - 2}
@@ -325,8 +411,46 @@ export default function Personas() {
                   </div>
                 )}
 
-                {/* Motivations (New) */}
+                {/* Demographics (Extended) */}
+                {persona.demographics && (
+                  <div className="space-y-1.5 text-xs">
+                    <span className="flex items-center gap-2 text-sm text-muted-foreground font-medium">
+                      <Users className="h-4 w-4" />
+                      Demographics Inference
+                    </span>
+                    {persona.demographics.ageEvidence && (
+                      <div><span className="text-muted-foreground">Age:</span> {persona.demographics.ageEvidence}</div>
+                    )}
+                    {persona.demographics.occupationInference && (
+                      <div><span className="text-muted-foreground">Occupation:</span> {persona.demographics.occupationInference}</div>
+                    )}
+                    {persona.demographics.digitalFluency && (
+                      <div><span className="text-muted-foreground">Digital Fluency:</span> <span className="capitalize">{persona.demographics.digitalFluency}</span></div>
+                    )}
+                  </div>
+                )}
 
+                {/* Content Consumption (Extended) */}
+                {persona.content_consumption && (
+                  <div className="space-y-1.5 text-xs">
+                    <span className="flex items-center gap-2 text-sm text-muted-foreground font-medium">
+                      <Target className="h-4 w-4" />
+                      Content Preferences
+                    </span>
+                    {persona.content_consumption.attentionSpan && (
+                      <div><span className="text-muted-foreground">Attention:</span> <span className="capitalize">{persona.content_consumption.attentionSpan}</span></div>
+                    )}
+                    {persona.content_consumption.engagementTriggers && persona.content_consumption.engagementTriggers.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {persona.content_consumption.engagementTriggers.map(trigger => (
+                          <span key={trigger} className="rounded-md bg-blue-500/10 text-blue-600 px-1.5 py-0.5 text-xs">{trigger}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Motivations (New) */}
                 {persona.motivations && persona.motivations.length > 0 && (
                   <div className="space-y-2">
                     <span className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -334,8 +458,9 @@ export default function Personas() {
                       Motivations
                     </span>
                     <p className="text-xs text-foreground/80 line-clamp-1">
-
-                      {persona.motivations.join(", ")}
+                      {Array.isArray(persona.motivations) && typeof persona.motivations[0] === 'string'
+                        ? persona.motivations.join(", ")
+                        : persona.motivations.map((m: any) => m.text || m).join(", ")}
                     </p>
                   </div>
                 )}
@@ -526,9 +651,11 @@ export default function Personas() {
                 <Select value={knowledgeLevel} onValueChange={setKnowledgeLevel}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="beginner">Beginner</SelectItem>
-                    <SelectItem value="intermediate">Intermediate</SelectItem>
-                    <SelectItem value="advanced">Advanced</SelectItem>
+                    <SelectItem value="complete-beginner">1 - Complete Beginner</SelectItem>
+                    <SelectItem value="beginner">2 - Beginner</SelectItem>
+                    <SelectItem value="intermediate">3 - Intermediate</SelectItem>
+                    <SelectItem value="advanced">4 - Advanced</SelectItem>
+                    <SelectItem value="expert">5 - Expert</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -544,6 +671,25 @@ export default function Personas() {
                     <SelectItem value="LinkedIn">LinkedIn</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Target Country / Region</Label>
+                <Input
+                  value={targetCountry}
+                  onChange={(e) => setTargetCountry(e.target.value)}
+                  placeholder="e.g., USA, UK, Vietnam, Japan, Global..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Preferred Tone</Label>
+                <Input
+                  value={preferredTone}
+                  onChange={(e) => setPreferredTone(e.target.value)}
+                  placeholder="Casual & Direct, Motivational"
+                />
               </div>
             </div>
 
@@ -571,15 +717,6 @@ export default function Personas() {
                 value={objections}
                 onChange={(e) => setObjections(e.target.value)}
                 placeholder="Too complicated, Fake guru vibes..."
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Preferred Tone</Label>
-              <Input
-                value={preferredTone}
-                onChange={(e) => setPreferredTone(e.target.value)}
-                placeholder="Casual & Direct, Motivational"
               />
             </div>
           </div>

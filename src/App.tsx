@@ -15,6 +15,7 @@ import Pricing from "./pages/Pricing";
 import Writer from "./pages/writer";
 import Notes from "./pages/Notes";
 import Settings from "./pages/Settings";
+import TubeClone from "./pages/TubeClone";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -59,6 +60,7 @@ const AppRoutes = () => (
     <Route path="/writer" element={<ProtectedRoute><Writer /></ProtectedRoute>} />
     <Route path="/writer/:id" element={<ProtectedRoute><Writer /></ProtectedRoute>} />
     <Route path="/notes" element={<ProtectedRoute><Notes /></ProtectedRoute>} />
+    <Route path="/tubeclone" element={<ProtectedRoute><TubeClone /></ProtectedRoute>} />
     <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
     <Route path="*" element={<NotFound />} />
   </Routes>

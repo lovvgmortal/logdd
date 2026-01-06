@@ -1,8 +1,9 @@
-import { 
-  Dna, 
-  Users, 
-  PenTool, 
-  LayoutDashboard 
+import {
+  Dna,
+  Users,
+  PenTool,
+  LayoutDashboard,
+  Search
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 
@@ -11,6 +12,7 @@ const navItems = [
   { title: "DNA", url: "/dna-lab", icon: Dna },
   { title: "Personas", url: "/personas", icon: Users },
   { title: "Writer", url: "/writer", icon: PenTool },
+  { title: "TubeClone", url: "/tubeclone", icon: Search },
 ];
 
 export function MobileNav() {

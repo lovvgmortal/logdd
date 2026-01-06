@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 
 // Scale factor for credit usage display (e.g. 1 real $ = 5 display $)
-const USAGE_SCALE = 1000;
+const USAGE_SCALE = 5;
 
 export interface OpenRouterCredits {
   total_credits: number;

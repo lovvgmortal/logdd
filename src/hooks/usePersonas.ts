@@ -11,14 +11,34 @@ export interface Persona {
   name: string;
   age_range: string | null;
   knowledge_level: string | null;
-  pain_points: string[] | null;
+  target_country: string | null; // NEW: Target audience country/region
+  pain_points: string[] | Array<{ text: string; intensity: string; evidence: string }> | null;
   preferred_tone: string | null;
   vocabulary: string | null;
   platform: string | null;
   description: string | null;
-  motivations: string[] | null;
-  objections: string[] | null;
+  motivations: string[] | Array<{ text: string; frequency: string; source: string }> | null;
+  objections: string[] | Array<{ text: string; frequency: string; source: string }> | null;
   content_sources: any[] | null; // JSONB array of { id, script, youtubeUrl, comments }
+  // Extended fields (from enhanced analysis)
+  knowledge_profile?: {
+    domainKnowledge: number;
+    engagementDepth: number;
+    skepticismLevel: number;
+    reasoning: string;
+  } | null;
+  demographics?: {
+    ageEvidence: string;
+    locationHints: string;
+    occupationInference: string;
+    digitalFluency: string;
+  } | null;
+  content_consumption?: {
+    attentionSpan: string;
+    engagementTriggers: string[];
+    learningStyle: string[];
+    preferredContentLength: string;
+  } | null;
   created_at: string;
   updated_at: string;
 }
@@ -70,6 +90,7 @@ export function usePersonas() {
         user_id: user.id,
         age_range: persona.age_range,
         knowledge_level: persona.knowledge_level,
+        target_country: persona.target_country,
         pain_points: persona.pain_points,
         preferred_tone: persona.preferred_tone,
         vocabulary: persona.vocabulary,
@@ -82,7 +103,7 @@ export function usePersonas() {
 
       const { data, error } = await supabase
         .from("personas")
-        .insert(insertData)
+        .insert(insertData as any)
         .select()
         .single();
 
@@ -105,7 +126,7 @@ export function usePersonas() {
     try {
       const { data, error } = await supabase
         .from("personas")
-        .update(updates)
+        .update(updates as any)
         .eq("id", id)
         .select()
         .single();
@@ -152,7 +173,7 @@ export function usePersonas() {
     if (!apiKey) {
       toast({
         title: "Error",
-        description: "OpenRouter API Key chưa được cấu hình. Vui lòng nhập key vào Settings.",
+        description: "OpenRouter API Key is not configured. Please enter your key in Settings.",
         variant: "destructive",
       });
       return null;

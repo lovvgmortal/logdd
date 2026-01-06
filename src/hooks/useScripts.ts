@@ -52,6 +52,8 @@ export interface Script {
   status: string | null;
   outline_history: VersionEntry[] | null;
   script_history: VersionEntry[] | null;
+  outline_model: string | null;
+  script_model: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -93,10 +95,13 @@ export function useScripts() {
 
       if (error) throw error;
       // Cast JSON fields to proper types
+      // Note: outline_model and script_model may not exist until migration is run
       const typedData = (data || []).map(script => ({
         ...script,
         outline_history: (script.outline_history as unknown as VersionEntry[]) || [],
         script_history: (script.script_history as unknown as VersionEntry[]) || [],
+        outline_model: (script as any).outline_model || 'google/gemini-3-flash-preview',
+        script_model: (script as any).script_model || 'google/gemini-3-flash-preview',
       })) as Script[];
       setScripts(typedData);
     } catch (error) {
@@ -292,6 +297,8 @@ export function useScripts() {
         ...data,
         outline_history: (data.outline_history as unknown as VersionEntry[]) || [],
         script_history: (data.script_history as unknown as VersionEntry[]) || [],
+        outline_model: (data as any).outline_model || 'google/gemini-3-flash-preview',
+        script_model: (data as any).script_model || 'google/gemini-3-flash-preview',
       } as Script;
       setScripts(prev => [typedData, ...prev]);
       toast({ title: "Success", description: "Script saved successfully" });
@@ -328,6 +335,8 @@ export function useScripts() {
         ...data,
         outline_history: (data.outline_history as unknown as VersionEntry[]) || [],
         script_history: (data.script_history as unknown as VersionEntry[]) || [],
+        outline_model: (data as any).outline_model || 'google/gemini-3-flash-preview',
+        script_model: (data as any).script_model || 'google/gemini-3-flash-preview',
       } as Script;
       setScripts(prev => prev.map(s => s.id === id ? typedData : s));
       toast({ title: "Success", description: "Script updated successfully" });

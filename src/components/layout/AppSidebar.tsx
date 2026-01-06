@@ -1,4 +1,4 @@
-import { Dna, Users, PenTool, StickyNote, LayoutDashboard, Settings, Cloud, LogOut, PanelLeftClose, PanelLeft } from "lucide-react";
+import { Dna, Users, PenTool, StickyNote, LayoutDashboard, Settings, Cloud, LogOut, PanelLeftClose, PanelLeft, Search } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter, useSidebar } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/useAuth";
@@ -20,6 +20,10 @@ const mainNavItems = [{
   title: "Writer",
   url: "/writer",
   icon: PenTool
+}, {
+  title: "TubeClone",
+  url: "/tubeclone",
+  icon: Search
 }, {
   title: "Notes",
   url: "/notes",
@@ -57,10 +61,10 @@ export function AppSidebar() {
               {mainNavItems.map(item => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild tooltip={item.title}>
-                    <NavLink 
-                      to={item.url} 
-                      end={item.url === "/"} 
-                      className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 hover:bg-accent" 
+                    <NavLink
+                      to={item.url}
+                      end={item.url === "/"}
+                      className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 hover:bg-accent"
                       activeClassName="bg-primary/10 text-primary"
                     >
                       <item.icon className="h-5 w-5 shrink-0" />
@@ -93,13 +97,13 @@ export function AppSidebar() {
               </Button>
             </SidebarMenuButton>
           </SidebarMenuItem>
-          
+
           {/* Settings */}
           <SidebarMenuItem>
             <SidebarMenuButton asChild tooltip="Settings">
-              <NavLink 
-                to="/settings" 
-                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 hover:bg-accent" 
+              <NavLink
+                to="/settings"
+                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 hover:bg-accent"
                 activeClassName="bg-primary/10 text-primary"
               >
                 <Settings className="h-5 w-5 shrink-0" />
@@ -107,7 +111,7 @@ export function AppSidebar() {
               </NavLink>
             </SidebarMenuButton>
           </SidebarMenuItem>
-          
+
           {/* Logout */}
           <SidebarMenuItem>
             <SidebarMenuButton asChild tooltip="Logout">

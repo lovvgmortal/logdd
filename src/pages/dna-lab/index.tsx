@@ -22,6 +22,7 @@ import { AlertTriangle, CheckCircle2, RotateCw } from "lucide-react";
 import { DNAList } from "./components";
 import type { VideoVariant } from "./types";
 import { createEmptyVariant } from "./types";
+import { FeatureGate } from "@/components/subscription";
 
 export default function DNALab() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -624,34 +625,38 @@ export default function DNALab() {
               <div className="space-y-6">
                 {viralVariants.map((variant, index) => renderVariantCard(variant, "viral", index))}
               </div>
-              <Button
-                variant="secondary"
-                className="w-full rounded-xl gap-2"
-                onClick={addViralVariant}
-              >
-                <Plus className="h-4 w-4" />
-                Add Viral
-              </Button>
+              <FeatureGate feature="batch_dna" hideCompletely>
+                <Button
+                  variant="secondary"
+                  className="w-full rounded-xl gap-2"
+                  onClick={addViralVariant}
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Viral
+                </Button>
+              </FeatureGate>
             </div>
 
-            {/* Flops Section */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-red-500">
-                <Trash2 className="h-5 w-5" />
-                <h3 className="font-semibold text-lg">Flops</h3>
+            {/* Flops Section - Pro Only */}
+            <FeatureGate feature="flop_analysis">
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-red-500">
+                  <Trash2 className="h-5 w-5" />
+                  <h3 className="font-semibold text-lg">Flops</h3>
+                </div>
+                <div className="space-y-6">
+                  {flopVariants.map((variant, index) => renderVariantCard(variant, "flop", index))}
+                </div>
+                <Button
+                  variant="secondary"
+                  className="w-full rounded-xl gap-2"
+                  onClick={addFlopVariant}
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Flop
+                </Button>
               </div>
-              <div className="space-y-6">
-                {flopVariants.map((variant, index) => renderVariantCard(variant, "flop", index))}
-              </div>
-              <Button
-                variant="secondary"
-                className="w-full rounded-xl gap-2"
-                onClick={addFlopVariant}
-              >
-                <Plus className="h-4 w-4" />
-                Add Flop
-              </Button>
-            </div>
+            </FeatureGate>
           </div>
 
           {/* Bottom Controls */}
