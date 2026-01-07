@@ -11,6 +11,7 @@ import { useTubeCloneContext } from "../context";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { useToast } from "@/hooks/use-toast";
 import { extractVideoId, getVideoDetails } from "@/lib/youtube-search";
+import { useLanguage } from "@/hooks/useLanguage";
 import type { TubeCloneProject } from "../types";
 
 // Video preview interface
@@ -118,6 +119,7 @@ export function StepConfig({ project, configState, setConfigState, onNext }: Ste
     const { updateProject, videos } = useTubeCloneContext();
     const { settings } = useUserSettings();
     const { toast } = useToast();
+    const { t } = useLanguage();
     const [saving, setSaving] = useState(false);
     const [fetching, setFetching] = useState(false);
 
@@ -125,19 +127,19 @@ export function StepConfig({ project, configState, setConfigState, onNext }: Ste
 
     const handleFetchVideoDetails = async () => {
         if (!configState.sourceUrl) {
-            toast({ title: "Error", description: "Please enter a YouTube URL first", variant: "destructive" });
+            toast({ title: t('tubeClone.toast.error'), description: t('tubeClone.toast.enterUrl'), variant: "destructive" });
             return;
         }
 
         const apiKey = settings?.youtube_api_key;
         if (!apiKey) {
-            toast({ title: "Error", description: "YouTube API Key is not configured. Please add it in Settings.", variant: "destructive" });
+            toast({ title: t('tubeClone.toast.error'), description: t('tubeClone.toast.apiKeyMissing'), variant: "destructive" });
             return;
         }
 
         const videoId = extractVideoId(configState.sourceUrl);
         if (!videoId) {
-            toast({ title: "Error", description: "Invalid YouTube URL", variant: "destructive" });
+            toast({ title: t('tubeClone.toast.error'), description: t('tubeClone.toast.invalidUrl'), variant: "destructive" });
             return;
         }
 
@@ -161,11 +163,11 @@ export function StepConfig({ project, configState, setConfigState, onNext }: Ste
                     detectedNiche: prev.detectedNiche || video.title,
                 }));
 
-                toast({ title: "Video Found", description: `"${video.title}"` });
+                toast({ title: t('tubeClone.toast.videoFound'), description: `"${video.title}"` });
             }
         } catch (error) {
             console.error("Error fetching video:", error);
-            toast({ title: "Error", description: "Failed to fetch video details", variant: "destructive" });
+            toast({ title: t('tubeClone.toast.error'), description: t('tubeClone.toast.fetchFailed'), variant: "destructive" });
         } finally {
             setFetching(false);
         }
@@ -227,7 +229,7 @@ export function StepConfig({ project, configState, setConfigState, onNext }: Ste
     return (
         <GlassCard variant="elevated">
             <GlassCardHeader>
-                <GlassCardTitle>Research Configuration</GlassCardTitle>
+                <GlassCardTitle>{t('tubeClone.config.title')}</GlassCardTitle>
             </GlassCardHeader>
             <GlassCardContent className="space-y-6">
                 <div className="space-y-2">
@@ -242,7 +244,7 @@ export function StepConfig({ project, configState, setConfigState, onNext }: Ste
                 <div className="space-y-2">
                     <Label className="flex items-center gap-2">
                         <LinkIcon className="h-4 w-4" />
-                        Competitor Video URL (Optional)
+                        {t('tubeClone.config.competitorUrl')}
                     </Label>
                     <div className="flex gap-2">
                         <Input
@@ -253,24 +255,24 @@ export function StepConfig({ project, configState, setConfigState, onNext }: Ste
                         />
                         <Button variant="outline" onClick={handleFetchVideoDetails} disabled={fetching || !configState.sourceUrl} className="gap-2">
                             {fetching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                            Fetch
+                            {t('tubeClone.config.fetch')}
                         </Button>
                     </div>
-                    <p className="text-xs text-muted-foreground">Paste a URL to auto-fill search keywords, detecting category and tags.</p>
+                    <p className="text-xs text-muted-foreground">{t('tubeClone.config.pasteUrlHelp')}</p>
                 </div>
 
                 {/* Search Keywords Input - NEW */}
                 <div className="space-y-2">
                     <Label className="flex items-center gap-2">
                         <Type className="h-4 w-4" />
-                        Search Keywords / Niche
+                        {t('tubeClone.config.keywordsLabel')}
                     </Label>
                     <Input
                         value={configState.detectedNiche}
                         onChange={(e) => setConfigState(prev => ({ ...prev, detectedNiche: e.target.value }))}
-                        placeholder="e.g. 'coding tutorials', 'vegan recipes', 'minecraft gameplay'"
+                        placeholder={t('tubeClone.config.keywordsPlaceholder')}
                     />
-                    <p className="text-xs text-muted-foreground">These keywords will be used to find competitor videos.</p>
+                    <p className="text-xs text-muted-foreground">{t('tubeClone.config.keywordsHelp')}</p>
                 </div>
 
                 {configState.videoPreview && (
@@ -287,15 +289,15 @@ export function StepConfig({ project, configState, setConfigState, onNext }: Ste
 
                         <div className="grid gap-2 text-sm">
                             <div className="flex items-start gap-2">
-                                <Badge variant="outline" className="shrink-0">Category</Badge>
+                                <Badge variant="outline" className="shrink-0">{t('tubeClone.config.category')}</Badge>
                                 <span className="text-muted-foreground">{getCategoryName(configState.videoPreview.categoryId)}</span>
                             </div>
                             <div className="flex items-start gap-2">
-                                <Badge variant="outline" className="shrink-0">Published</Badge>
+                                <Badge variant="outline" className="shrink-0">{t('tubeClone.config.published')}</Badge>
                                 <span className="text-muted-foreground">{formatDate(configState.videoPreview.publishedAt)}</span>
                             </div>
                             <div className="flex items-start gap-2">
-                                <Badge variant="outline" className="shrink-0">Tags ({configState.videoPreview.tags.length})</Badge>
+                                <Badge variant="outline" className="shrink-0">{t('tubeClone.config.tags')} ({configState.videoPreview.tags.length})</Badge>
                                 {configState.videoPreview.tags.length > 0 ? (
                                     <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
                                         {configState.videoPreview.tags.map((tag, idx) => (
@@ -303,7 +305,7 @@ export function StepConfig({ project, configState, setConfigState, onNext }: Ste
                                         ))}
                                     </div>
                                 ) : (
-                                    <span className="text-muted-foreground italic">No tags found</span>
+                                    <span className="text-muted-foreground italic">{t('tubeClone.config.noTags')}</span>
                                 )}
                             </div>
                         </div>
@@ -312,7 +314,7 @@ export function StepConfig({ project, configState, setConfigState, onNext }: Ste
 
                 <div className="grid gap-6 md:grid-cols-2">
                     <div className="space-y-2">
-                        <Label className="flex items-center gap-2"><Globe className="h-4 w-4" /> Target Country</Label>
+                        <Label className="flex items-center gap-2"><Globe className="h-4 w-4" /> {t('tubeClone.config.targetCountry')}</Label>
                         <Select value={configState.country} onValueChange={(v) => setConfigState(prev => ({ ...prev, country: v }))}>
                             <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
@@ -322,7 +324,7 @@ export function StepConfig({ project, configState, setConfigState, onNext }: Ste
                     </div>
                     <div className="space-y-2">
                         <Label className="flex items-center justify-between">
-                            <span className="flex items-center gap-2"><Video className="h-4 w-4" /> Videos to Analyze</span>
+                            <span className="flex items-center gap-2"><Video className="h-4 w-4" /> {t('tubeClone.config.videosToAnalyze')}</span>
                             <span className="text-primary font-bold">{configState.videoLimit}</span>
                         </Label>
                         <Slider
@@ -335,7 +337,7 @@ export function StepConfig({ project, configState, setConfigState, onNext }: Ste
 
                 <div className="space-y-4">
                     <Label className="flex items-center justify-between">
-                        <span className="flex items-center gap-2"><Clock className="h-4 w-4" /> Time Range (Past)</span>
+                        <span className="flex items-center gap-2"><Clock className="h-4 w-4" /> {t('tubeClone.config.timeRange')}</span>
                         <span className="text-primary font-bold">{formatHoursLabel(configState.hoursRange)}</span>
                     </Label>
                     <Slider
@@ -351,11 +353,11 @@ export function StepConfig({ project, configState, setConfigState, onNext }: Ste
                 <div className="flex justify-between pt-4">
                     {videos.length > 0 && (
                         <div className="text-sm text-yellow-600 flex items-center">
-                            Warning: Changing keywords might require re-searching.
+                            {t('tubeClone.config.warningReSearch')}
                         </div>
                     )}
                     <Button onClick={handleSaveAndNext} disabled={saving || !configState.name.trim()} className="gap-2 ml-auto">
-                        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Start Research <ArrowRight className="h-4 w-4" /></>}
+                        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <>{t('tubeClone.config.startResearch')} <ArrowRight className="h-4 w-4" /></>}
                     </Button>
                 </div>
             </GlassCardContent>

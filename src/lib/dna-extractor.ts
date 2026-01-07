@@ -1,5 +1,11 @@
 import { callOpenRouter, extractJsonFromResponse, ChatMessage } from "./openrouter";
-import { DNA_EXTRACTION_PROMPT, SCAN_PROMPT, DNA_EVOLUTION_PROMPT } from "@/prompts/dna";
+import {
+  DNA_EXTRACTION_PROMPT,
+  SCAN_PROMPT,
+  DNA_EVOLUTION_PROMPT,
+  STRUCTURE_ANALYSIS_PROMPT,
+  PATTERN_ENRICHMENT_PROMPT
+} from "@/prompts/dna";
 
 // Extended DNA interface matching the detailed analysis UI
 export interface ExtractedDNA {
@@ -11,12 +17,13 @@ export interface ExtractedDNA {
   // Audience Psychology
   audiencePsychology: string;
 
-  // Linguistic Fingerprint (The Voice)
-  linguisticFingerprint: {
-    personaRole: string;
-    toneAnalysis: string;
-    syntaxPatterns?: string;
-    signatureKeywords: string[];
+  // Voice Profile (CONSOLIDATED - gộp tone + pacing + linguisticFingerprint)
+  voiceProfile: {
+    personaRole: string; // Mentor, Guide, Insider, etc.
+    toneAnalysis: string; // Detailed tone description
+    syntaxPatterns?: string; // Sentence structure patterns
+    signatureKeywords: string[]; // 5-7 keywords max
+    globalPacing: string; // Linguistic rhythm (not video editing)
   };
 
   // Hook Angle (Psychology)
@@ -25,53 +32,80 @@ export interface ExtractedDNA {
     deconstruction: string;
   };
 
-  // Pacing (Global)
-  pacingAndTone: {
-    pacing: string;
-  };
-
-  // Emotional Arc (New)
+  // Emotional Arc
   emotionalArc?: {
     section: string;
     emotion: string;
   }[];
 
-  // Structural Skeleton (Advanced)
+  // Structural Skeleton (TỐI ƯU - giảm 12 fields → 6 fields cốt lõi)
   structuralSkeleton: {
     title: string;
     wordCount: number;
     tone?: string;
     pacing?: string;
-    contentFocus?: string;
-    openLoop?: string;
-    closesLoop?: string;
-    audienceInteraction?: string;
-    antiPattern?: string;
-    audienceValue?: string;
-    transitionOut?: string;
+    keyFocus?: string; // Renamed from contentFocus
+    audienceValue?: string; // Giá trị cho audience
   }[];
 
-  // High Dopamine (Keep)
+  // Patterns (CONSOLIDATED - gộp corePatterns + viralXFactors với tags)
+  patterns: {
+    pattern: string;
+    tag: 'safe' | 'experimental'; // safe = xuất hiện 2+ videos, experimental = unique
+  }[];
+
+  // Persuasion Flow (GIỮ LẠI - kỹ thuật dẫn dắt)
+  persuasionFlow: {
+    framework: 'PAS' | 'BAB' | 'Story-Based' | 'Custom';
+    proofSequence: Array<'personal-story' | 'data' | 'case-study' | 'expert-quote' | 'social-proof'>;
+    objectionHandling: {
+      placement: string;
+      mainObjection: string;
+      counterTactic: string;
+    };
+    logicalProgression: string[];
+  };
+
+  // Retention Hooks (GIỮ LẠI - word count based)
+  retentionHooks: {
+    atWordCount: number;
+    technique: string;
+    example: string;
+  }[];
+
+  // Transitions (GIỮ LẠI - công thức chuyển section)
+  transitions: {
+    from: string;
+    to: string;
+    formula: string;
+    example?: string;
+  }[];
+
+  // Friction Points (CONSOLIDATED - gộp confusionPoints + objections, XÓA flopAvoidance vì duplicate)
+  frictionPoints: {
+    type: 'confusion' | 'objection' | 'anti-pattern';
+    point: string;
+    atWordCount?: number;
+    solution?: string;
+  }[];
+
+  // High Dopamine Elements (GIỮ NGUYÊN)
   highDopamine: string[];
 
-  // Confusion Points (Fix)
-  confusionPoints: string[];
-
-  // Objections (Address)
-  objections: string[];
-
-  // Core Patterns (70% Safe)
-  corePatterns: string[];
-
-  // Viral X-Factors (30% Magic)
-  viralXFactors: string[];
-
-  // Flop Avoidance
-  flopAvoidance: string[];
-
-  // Legacy fields for database compatibility
+  // Legacy fields for backward compatibility
+  linguisticFingerprint?: {
+    personaRole: string;
+    toneAnalysis: string;
+    syntaxPatterns?: string;
+    signatureKeywords: string[];
+  };
+  pacingAndTone?: { pacing: string };
+  confusionPoints?: string[];
+  objections?: string[];
+  corePatterns?: string[];
+  viralXFactors?: string[];
   tone?: string;
-  patterns?: string[];
+  patterns_legacy?: string[];
   vocabulary?: string;
   hook_type?: string;
   hook_examples?: string[];
@@ -98,6 +132,31 @@ export interface ExtractionInput {
   language?: string;
 }
 
+// New interfaces for 2-step extraction
+export interface VideoStructure {
+  videoIndex: number;
+  totalWords: number;
+  sections: {
+    title: string;
+    wordCount: number;
+    startWord: number;
+    endWord: number;
+    functionalType: string;
+  }[];
+}
+
+export interface ConsensusStructure {
+  title: string;
+  wordCount: number;
+  functionalType: string;
+  rationale?: string;
+}
+
+export interface StructureAnalysisResult {
+  videoStructures: VideoStructure[];
+  consensusStructure: ConsensusStructure[];
+}
+
 // New interface for Scan results
 export interface ContentScanResult {
   index: number;
@@ -110,6 +169,109 @@ export interface ContentScanResult {
   reason?: string;
   wordCount: number;
 }
+
+// ============================================================================
+// HELPER: Convert old DNA format to new consolidated format
+// ============================================================================
+
+/**
+ * Convert legacy DNA extraction result to new ExtractedDNA format
+ * Handles backward compatibility and consolidation
+ */
+const convertToNewDNAFormat = (rawDna: any, targetWordCount: number): ExtractedDNA => {
+  // Consolidate voiceProfile (merge tone + pacing + linguisticFingerprint)
+  const voiceProfile = {
+    personaRole: rawDna.linguisticFingerprint?.personaRole || rawDna.voiceProfile?.personaRole || "",
+    toneAnalysis: rawDna.linguisticFingerprint?.toneAnalysis || rawDna.voiceProfile?.toneAnalysis || "",
+    syntaxPatterns: rawDna.linguisticFingerprint?.syntaxPatterns || rawDna.voiceProfile?.syntaxPatterns || "",
+    signatureKeywords: (rawDna.linguisticFingerprint?.signatureKeywords || rawDna.voiceProfile?.signatureKeywords || []).slice(0, 7),
+    globalPacing: rawDna.pacingAndTone?.pacing || rawDna.voiceProfile?.globalPacing || rawDna.pacing || "medium"
+  };
+
+  // Consolidate patterns (merge corePatterns + viralXFactors with tags)
+  const patterns = [
+    ...(rawDna.corePatterns || []).map((p: string) => ({ pattern: p, tag: 'safe' as const })),
+    ...(rawDna.viralXFactors || []).map((p: string) => ({ pattern: p, tag: 'experimental' as const }))
+  ];
+
+  // Consolidate frictionPoints (merge confusionPoints + objections + flopAvoidance)
+  const frictionPoints = [
+    ...(rawDna.confusionPoints || []).map((p: string) => ({
+      type: 'confusion' as const,
+      point: p,
+      solution: undefined
+    })),
+    ...(rawDna.objections || []).map((p: string) => ({
+      type: 'objection' as const,
+      point: p,
+      solution: undefined
+    })),
+    ...(rawDna.flopAvoidance || []).map((p: string) => ({
+      type: 'anti-pattern' as const,
+      point: p,
+      solution: undefined
+    }))
+  ];
+
+  // Default persuasionFlow if not provided
+  const persuasionFlow = rawDna.persuasionFlow || {
+    framework: 'Custom' as const,
+    proofSequence: ['personal-story', 'data'] as Array<'personal-story' | 'data' | 'case-study' | 'expert-quote' | 'social-proof'>,
+    objectionHandling: {
+      placement: "after-solution-before-proof",
+      mainObjection: rawDna.objections?.[0] || "skepticism",
+      counterTactic: "provide evidence and social proof"
+    },
+    logicalProgression: ["Establish credibility", "Present problem", "Offer solution", "Prove with evidence"]
+  };
+
+  // Default retentionHooks if not provided
+  const retentionHooks = rawDna.retentionHooks || [
+    { atWordCount: 200, technique: "pattern-interrupt", example: "Reframe the core problem" },
+    { atWordCount: 500, technique: "teaser", example: "Preview upcoming insight" }
+  ];
+
+  // Default transitions if not provided
+  const transitions = rawDna.transitions || [];
+
+  return {
+    name: rawDna.name || "Extracted DNA",
+    niche: rawDna.niche || "",
+    targetWordCount,
+    audiencePsychology: rawDna.audiencePsychology || "",
+    voiceProfile,
+    hookAngle: rawDna.hookAngle || { angleCategory: "", deconstruction: "" },
+    emotionalArc: rawDna.emotionalArc || [],
+    structuralSkeleton: rawDna.structuralSkeleton || [],
+    patterns,
+    persuasionFlow,
+    retentionHooks,
+    transitions,
+    frictionPoints,
+    highDopamine: rawDna.highDopamine || [],
+
+    // Legacy fields for backward compatibility
+    linguisticFingerprint: rawDna.linguisticFingerprint,
+    pacingAndTone: rawDna.pacingAndTone,
+    confusionPoints: rawDna.confusionPoints,
+    objections: rawDna.objections,
+    corePatterns: rawDna.corePatterns,
+    viralXFactors: rawDna.viralXFactors,
+    tone: rawDna.pacingAndTone?.tone || rawDna.tone || "",
+    patterns_legacy: rawDna.corePatterns || [],
+    vocabulary: rawDna.linguisticFingerprint?.signatureKeywords?.join(", ") || "",
+    hook_type: rawDna.hookAngle?.angleCategory || "",
+    hook_examples: rawDna.hook_examples || [],
+    structure: rawDna.structuralSkeleton?.map((s: any) => s.title) || [],
+    pacing: rawDna.pacingAndTone?.pacing || rawDna.pacing || "",
+    retention_tactics: rawDna.highDopamine || [],
+    x_factors: rawDna.viralXFactors || []
+  };
+};
+
+// ============================================================================
+// PRE-SCAN - Content Quality & Outlier Detection
+// ============================================================================
 
 // Prompt for Pre-Scan (Fast/Cheap)
 // SCAN_PROMPT is imported from @/prompts/dna
@@ -152,6 +314,120 @@ export const scanContent = async (
       wordCount: video?.transcript?.split(/\s+/).length || 0
     };
   });
+};
+
+// ============================================================================
+// 2-STEP DNA EXTRACTION - Structure First, Then Patterns
+// ============================================================================
+
+/**
+ * Step 1: Extract structural skeleton only
+ */
+export const extractStructure = async (
+  input: ExtractionInput,
+  apiKey: string,
+  model: string = "google/gemini-3-flash-preview"
+): Promise<StructureAnalysisResult> => {
+  if (!apiKey) {
+    throw new Error("OpenRouter API Key chưa được cấu hình.");
+  }
+
+  // Build user content with all videos
+  let contentParts: string[] = [];
+
+  input.viralVideos.forEach((video, i) => {
+    contentParts.push(`=== VIRAL VIDEO ${i + 1}: ${video.title || 'Untitled'} ===`);
+    if (video.transcript) contentParts.push(`TRANSCRIPT:\n${video.transcript}`);
+  });
+
+  // Add flops for contrast
+  if (input.flopVideos.length > 0) {
+    input.flopVideos.forEach((video, i) => {
+      contentParts.push(`=== FLOP (AVOID) ${i + 1}: ${video.title} ===`);
+      contentParts.push(`TRANSCRIPT:\n${video.transcript}`);
+    });
+  }
+
+  const userContent = contentParts.join("\n\n");
+
+  const messages: ChatMessage[] = [
+    { role: "system", content: STRUCTURE_ANALYSIS_PROMPT },
+    { role: "user", content: `Analyze structures and find consensus:\n\n${userContent}` }
+  ];
+
+  const response = await callOpenRouter(messages, apiKey, model);
+  return extractJsonFromResponse(response);
+};
+
+/**
+ * Step 2: Enrich structure with patterns and metadata
+ */
+export const enrichStructureWithPatterns = async (
+  consensusStructure: ConsensusStructure[],
+  input: ExtractionInput,
+  apiKey: string,
+  model: string = "google/gemini-3-flash-preview"
+): Promise<ExtractedDNA> => {
+  if (!apiKey) {
+    throw new Error("OpenRouter API Key chưa được cấu hình.");
+  }
+
+  // Build content with structure reference
+  let userContent = `=== PRE-DEFINED CONSENSUS STRUCTURE ===\n`;
+  userContent += JSON.stringify(consensusStructure, null, 2);
+  userContent += `\n\n=== VIDEO TRANSCRIPTS FOR ANALYSIS ===\n\n`;
+
+  input.viralVideos.forEach((video, i) => {
+    userContent += `VIRAL VIDEO ${i + 1}: ${video.title}\n`;
+    userContent += `TRANSCRIPT: ${video.transcript}\n`;
+    if (video.comments) userContent += `COMMENTS: ${video.comments}\n`;
+    userContent += `\n`;
+  });
+
+  if (input.flopVideos.length > 0) {
+    userContent += `\n=== FLOP VIDEOS (FOR ANTI-PATTERNS) ===\n\n`;
+    input.flopVideos.forEach((video, i) => {
+      userContent += `FLOP ${i + 1}: ${video.title}\n`;
+      userContent += `TRANSCRIPT: ${video.transcript}\n\n`;
+    });
+  }
+
+  const messages: ChatMessage[] = [
+    { role: "system", content: PATTERN_ENRICHMENT_PROMPT },
+    { role: "user", content: userContent }
+  ];
+
+  const response = await callOpenRouter(messages, apiKey, model);
+  const enrichedDna = extractJsonFromResponse(response);
+
+  // Calculate target word count
+  const validTranscripts = input.viralVideos.filter(v => v.transcript);
+  const totalWords = validTranscripts.reduce((acc, v) => acc + (v.transcript?.split(/\s+/).length || 0), 0);
+  const avgWordCount = validTranscripts.length > 0 ? Math.round(totalWords / validTranscripts.length) : 0;
+
+  return convertToNewDNAFormat(enrichedDna, avgWordCount);
+};
+
+/**
+ * Main 2-step extraction function
+ */
+export const extractDnaWithTwoSteps = async (
+  input: ExtractionInput,
+  apiKey: string,
+  model: string = "google/gemini-3-flash-preview"
+): Promise<ExtractedDNA> => {
+  // Step 1: Extract structure
+  const structureResult = await extractStructure(input, apiKey, model);
+
+  // Step 2: Enrich with patterns
+  const enrichedDna = await enrichStructureWithPatterns(
+    structureResult.consensusStructure,
+    input,
+    apiKey,
+    model
+  );
+
+  return enrichedDna;
 };
 
 
@@ -218,34 +494,8 @@ export const extractDnaFromContent = async (
   // Merge all batch results using consensus-based algorithm
   const mergedResult = mergeBatchResults(batchResults, avgWordCount);
 
-  return {
-    name: mergedResult.name || "Extracted DNA",
-    niche: mergedResult.niche || "",
-    targetWordCount: mergedResult.targetWordCount,
-    audiencePsychology: mergedResult.audiencePsychology || "",
-    linguisticFingerprint: mergedResult.linguisticFingerprint || { personaRole: "", toneAnalysis: "", signatureKeywords: [] },
-    hookAngle: mergedResult.hookAngle || { angleCategory: "", deconstruction: "" },
-    pacingAndTone: mergedResult.pacingAndTone || { pacing: "", tone: "" },
-    emotionalArc: mergedResult.emotionalArc || [],
-    structuralSkeleton: mergedResult.structuralSkeleton || [],
-    highDopamine: mergedResult.highDopamine || [],
-    confusionPoints: mergedResult.confusionPoints || [],
-    objections: mergedResult.objections || [],
-    corePatterns: mergedResult.corePatterns || [],
-    viralXFactors: mergedResult.viralXFactors || [],
-    flopAvoidance: mergedResult.flopAvoidance || [],
-
-    // Legacy mapping
-    tone: mergedResult.pacingAndTone?.tone || "",
-    patterns: mergedResult.corePatterns || [],
-    vocabulary: mergedResult.linguisticFingerprint?.signatureKeywords?.join(", ") || "",
-    hook_type: mergedResult.hookAngle?.angleCategory || "",
-    hook_examples: [],
-    structure: mergedResult.structuralSkeleton?.map((s: any) => s.title) || [],
-    pacing: mergedResult.pacingAndTone?.pacing || "",
-    retention_tactics: mergedResult.highDopamine || [],
-    x_factors: mergedResult.viralXFactors || [],
-  };
+  // Convert to new ExtractedDNA format
+  return convertToNewDNAFormat(mergedResult, avgWordCount);
 };
 
 // Legacy function for backward compatibility
@@ -284,6 +534,52 @@ export interface LearningHistoryEntry {
 }
 
 // ============================================================================
+// STRUCTURE VALIDATION - Enforce reasonable section word counts
+// ============================================================================
+
+/**
+ * Validate and fix structural skeleton word counts
+ * Enforces limits defined in DNA extraction prompt
+ */
+const validateAndFixSkeleton = (skeleton: any[]): any[] => {
+  if (!skeleton || skeleton.length === 0) return skeleton;
+
+  const LIMITS: Record<string, { min: number; max: number }> = {
+    hook: { min: 30, max: 80 },
+    opening: { min: 60, max: 150 },
+    main: { min: 120, max: 250 },
+    transition: { min: 40, max: 100 },
+    cta: { min: 25, max: 60 }
+  };
+
+  // Detect section type based on title keywords
+  const detectType = (title: string): keyof typeof LIMITS => {
+    const lower = title.toLowerCase();
+    if (lower.includes('hook') || lower.includes('pattern interrupt') || lower.includes('attention')) return 'hook';
+    if (lower.includes('cta') || lower.includes('call to action') || lower.includes('conclusion')) return 'cta';
+    if (lower.includes('context') || lower.includes('setup') || lower.includes('intro')) return 'opening';
+    if (lower.includes('transition') || lower.includes('bridge')) return 'transition';
+    return 'main'; // Default to main content
+  };
+
+  return skeleton.map((section, idx) => {
+    const type = detectType(section.title);
+    const limits = LIMITS[type];
+    const wordCount = section.wordCount || 0;
+
+    // Check if out of bounds
+    if (wordCount < limits.min || wordCount > limits.max) {
+      console.warn(`[DNA Validation] Section "${section.title}" has ${wordCount} words, expected ${limits.min}-${limits.max}. Adjusting...`);
+      // Clamp to limits
+      const adjusted = Math.max(limits.min, Math.min(limits.max, wordCount));
+      return { ...section, wordCount: adjusted };
+    }
+
+    return section;
+  });
+};
+
+// ============================================================================
 // INTELLIGENT BATCH MERGING - Combine insights from multiple DNA extractions
 // ============================================================================
 
@@ -297,7 +593,12 @@ const mergeBatchResults = (batchResults: any[], avgWordCount: number): any => {
   }
 
   if (batchResults.length === 1) {
-    return { ...batchResults[0], targetWordCount: avgWordCount };
+    const result = { ...batchResults[0], targetWordCount: avgWordCount };
+    // Validate skeleton
+    if (result.structuralSkeleton) {
+      result.structuralSkeleton = validateAndFixSkeleton(result.structuralSkeleton);
+    }
+    return result;
   }
 
   // Helper: Count frequency of items across batches
@@ -409,8 +710,8 @@ const mergeBatchResults = (batchResults: any[], avgWordCount: number): any => {
       .filter(e => e && e.length > 0)
       .sort((a, b) => b.length - a.length)[0] || [],
 
-    // Structural Skeleton - merge intelligently
-    structuralSkeleton: mergeStructuralSkeletons(allStructuralSkeletons),
+    // Structural Skeleton - merge intelligently and validate
+    structuralSkeleton: validateAndFixSkeleton(mergeStructuralSkeletons(allStructuralSkeletons)),
 
     // Array merging - prioritize patterns appearing in multiple batches
     corePatterns: mergeArraysByFrequency(allCorePatterns, 0.5), // 50%+ batches
@@ -472,33 +773,11 @@ export const evolveDna = async (
   const response = await callOpenRouter(messages, apiKey, model);
   const result = extractJsonFromResponse(response);
 
-  // Ensure the evolved DNA has all required fields
-  const evolvedDna: ExtractedDNA = {
-    name: result.evolvedDna?.name || existingDna.name,
-    niche: result.evolvedDna?.niche || existingDna.niche,
-    targetWordCount: result.evolvedDna?.targetWordCount || existingDna.targetWordCount,
-    audiencePsychology: result.evolvedDna?.audiencePsychology || existingDna.audiencePsychology,
-    linguisticFingerprint: result.evolvedDna?.linguisticFingerprint || existingDna.linguisticFingerprint,
-    hookAngle: result.evolvedDna?.hookAngle || existingDna.hookAngle,
-    pacingAndTone: result.evolvedDna?.pacingAndTone || existingDna.pacingAndTone,
-    structuralSkeleton: result.evolvedDna?.structuralSkeleton || existingDna.structuralSkeleton,
-    highDopamine: result.evolvedDna?.highDopamine || existingDna.highDopamine,
-    confusionPoints: result.evolvedDna?.confusionPoints || existingDna.confusionPoints,
-    objections: result.evolvedDna?.objections || existingDna.objections,
-    corePatterns: result.evolvedDna?.corePatterns || existingDna.corePatterns,
-    viralXFactors: result.evolvedDna?.viralXFactors || existingDna.viralXFactors,
-    flopAvoidance: result.evolvedDna?.flopAvoidance || existingDna.flopAvoidance,
-    hook_examples: result.evolvedDna?.hook_examples || existingDna.hook_examples || [],
-    // Legacy fields
-    tone: result.evolvedDna?.tone || existingDna.tone,
-    patterns: result.evolvedDna?.patterns || existingDna.patterns,
-    vocabulary: result.evolvedDna?.vocabulary || existingDna.vocabulary,
-    hook_type: result.evolvedDna?.hook_type || existingDna.hook_type,
-    structure: result.evolvedDna?.structure || existingDna.structure,
-    pacing: result.evolvedDna?.pacing || existingDna.pacing,
-    retention_tactics: result.evolvedDna?.retention_tactics || existingDna.retention_tactics,
-    x_factors: result.evolvedDna?.x_factors || existingDna.x_factors,
-  };
+  // Convert evolved DNA to new format
+  const evolvedDna = convertToNewDNAFormat(
+    result.evolvedDna || existingDna,
+    result.evolvedDna?.targetWordCount || existingDna.targetWordCount || 0
+  );
 
   return {
     evolvedDna,

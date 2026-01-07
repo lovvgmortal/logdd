@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useLanguage } from "@/hooks/useLanguage";
 
 interface WordCountProps {
   text: string;
@@ -7,20 +8,21 @@ interface WordCountProps {
 }
 
 export function WordCount({ text, className = "", showCharacters = false }: WordCountProps) {
+  const { t } = useLanguage();
   const stats = useMemo(() => {
     const trimmed = text.trim();
     if (!trimmed) return { words: 0, characters: 0 };
-    
+
     const words = trimmed.split(/\s+/).filter(Boolean).length;
     const characters = trimmed.length;
-    
+
     return { words, characters };
   }, [text]);
 
   return (
     <span className={`text-xs text-muted-foreground ${className}`}>
-      {stats.words} words
-      {showCharacters && ` • ${stats.characters} chars`}
+      {stats.words} {t('common.words')}
+      {showCharacters && ` • ${stats.characters} ${t('common.chars')}`}
     </span>
   );
 }
@@ -32,13 +34,13 @@ interface TextareaWithCountProps extends React.TextareaHTMLAttributes<HTMLTextAr
   showCharacters?: boolean;
 }
 
-export function TextareaWithCount({ 
-  value, 
-  onValueChange, 
+export function TextareaWithCount({
+  value,
+  onValueChange,
   label,
   showCharacters = false,
   className = "",
-  ...props 
+  ...props
 }: TextareaWithCountProps) {
   return (
     <div className="space-y-1">

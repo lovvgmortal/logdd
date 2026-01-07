@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useNotes, Note } from "@/hooks/useNotes";
+import { useLanguage } from "@/hooks/useLanguage";
 
 const NOTE_COLORS = [
   "bg-violet-100 dark:bg-violet-900/20",
@@ -17,13 +18,14 @@ const NOTE_COLORS = [
 
 export default function Notes() {
   const { notes, loading, createNote, updateNote, deleteNote } = useNotes();
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editContent, setEditContent] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const filteredNotes = notes.filter(n => 
+  const filteredNotes = notes.filter(n =>
     n.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (n.content && n.content.toLowerCase().includes(searchQuery.toLowerCase()))
   );
@@ -38,7 +40,7 @@ export default function Notes() {
   const handleCreateNote = async () => {
     const randomColor = NOTE_COLORS[Math.floor(Math.random() * NOTE_COLORS.length)];
     const newNote = await createNote({
-      title: "Untitled Note",
+      title: t('notes.untitled'),
       content: "",
       color: randomColor,
     });
@@ -100,12 +102,12 @@ export default function Notes() {
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Quick Notes</h1>
-          <p className="text-muted-foreground">Capture ideas and insights</p>
+          <h1 className="text-2xl font-bold tracking-tight">{t('notes.title')}</h1>
+          <p className="text-muted-foreground">{t('notes.subtitle')}</p>
         </div>
         <Button onClick={handleCreateNote} className="gap-2 rounded-xl shadow-lg shadow-primary/20">
           <Plus className="h-4 w-4" />
-          New Note
+          {t('notes.newNote')}
         </Button>
       </div>
 
@@ -116,7 +118,7 @@ export default function Notes() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search notes..."
+              placeholder={t('notes.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 rounded-xl bg-card/50"
@@ -131,24 +133,23 @@ export default function Notes() {
           ) : filteredNotes.length === 0 ? (
             <div className="text-center py-8">
               <StickyNote className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
-              <p className="text-sm text-muted-foreground">No notes yet</p>
+              <p className="text-sm text-muted-foreground">{t('notes.noNotes')}</p>
             </div>
           ) : (
             <div className="space-y-3">
               {filteredNotes.map((note) => (
-                <GlassCard 
-                  key={note.id} 
-                  variant="elevated" 
-                  className={`cursor-pointer transition-all ${
-                    selectedNote?.id === note.id ? "ring-2 ring-primary" : ""
-                  }`}
+                <GlassCard
+                  key={note.id}
+                  variant="elevated"
+                  className={`cursor-pointer transition-all ${selectedNote?.id === note.id ? "ring-2 ring-primary" : ""
+                    }`}
                   onClick={() => setSelectedNote(note)}
                 >
                   <GlassCardContent className="p-4">
                     <div className={`mb-3 h-2 w-12 rounded-full ${note.color || "bg-violet-100 dark:bg-violet-900/20"}`} />
                     <h3 className="font-medium line-clamp-1">{note.title}</h3>
                     <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
-                      {note.content || "No content"}
+                      {note.content || t('notes.noContent')}
                     </p>
                     <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Clock className="h-3 w-3" />
@@ -167,24 +168,24 @@ export default function Notes() {
             {selectedNote ? (
               <GlassCardContent className="p-6 space-y-4 h-full flex flex-col">
                 <div className="flex items-start justify-between gap-4">
-                  <Input 
+                  <Input
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
                     className="text-lg font-semibold border-0 p-0 h-auto focus-visible:ring-0 bg-transparent"
-                    placeholder="Note title..."
+                    placeholder={t('notes.titlePlaceholder')}
                   />
                   <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={handleSaveNote}
                       disabled={saving}
                     >
                       {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                     </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       className="text-destructive hover:text-destructive"
                       onClick={handleDeleteNote}
                     >
@@ -192,35 +193,34 @@ export default function Notes() {
                     </Button>
                   </div>
                 </div>
-                
+
                 {/* Color Picker */}
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Color:</span>
+                  <span className="text-sm text-muted-foreground">{t('notes.color')}:</span>
                   <div className="flex gap-1.5">
                     {NOTE_COLORS.map((color) => (
                       <button
                         key={color}
                         onClick={() => handleColorChange(color)}
-                        className={`h-6 w-6 rounded-full transition-all hover:scale-110 ${color} ${
-                          selectedNote.color === color 
-                            ? "ring-2 ring-primary ring-offset-2 ring-offset-background" 
-                            : "ring-1 ring-border/50"
-                        }`}
+                        className={`h-6 w-6 rounded-full transition-all hover:scale-110 ${color} ${selectedNote.color === color
+                          ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
+                          : "ring-1 ring-border/50"
+                          }`}
                         title="Select color"
                       />
                     ))}
                   </div>
                 </div>
-                
+
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Clock className="h-4 w-4" />
                   {formatDate(selectedNote.updated_at)}
                 </div>
-                <Textarea 
+                <Textarea
                   value={editContent}
                   onChange={(e) => setEditContent(e.target.value)}
                   className="flex-1 resize-none border-0 p-0 pl-1 pt-2 focus-visible:ring-0 bg-transparent text-base leading-relaxed"
-                  placeholder="Write your note..."
+                  placeholder={t('notes.contentPlaceholder')}
                 />
               </GlassCardContent>
             ) : (
@@ -230,9 +230,9 @@ export default function Notes() {
                     <StickyNote className="h-12 w-12 text-muted-foreground/50" />
                   </div>
                   <div className="space-y-2">
-                    <p className="text-lg font-medium">Select a Note</p>
+                    <p className="text-lg font-medium">{t('notes.selectNote')}</p>
                     <p className="text-sm text-muted-foreground">
-                      Choose a note from the list to view and edit, or create a new one.
+                      {t('notes.selectNoteDescription')}
                     </p>
                   </div>
                 </div>

@@ -12,8 +12,7 @@ import { useDnas, DNA } from "@/hooks/useDnas";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useYoutubeComments } from "@/hooks/useYoutubeComments";
-import { DNAPreview } from "@/components/dna/DNAPreview";
-import { DNADetailView } from "@/components/dna/DNADetailView";
+import { DNAView } from "@/components/dna/DNAView";
 import { ExtractedDNA, ExtractionInput, ContentScanResult } from "@/lib/dna-extractor";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { ModelSelector } from "@/components/writer/ModelSelector";
@@ -23,8 +22,10 @@ import { DNAList } from "./components";
 import type { VideoVariant } from "./types";
 import { createEmptyVariant } from "./types";
 import { FeatureGate } from "@/components/subscription";
+import { useLanguage } from "@/hooks/useLanguage";
 
 export default function DNALab() {
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeMainTab, setActiveMainTab] = useState("library");
 
@@ -103,7 +104,7 @@ export default function DNALab() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    toast({ title: "Exported", description: "DNA exported successfully" });
+    toast({ title: t('dnaLab.exported'), description: t('dnaLab.exportSuccess') });
   };
 
   // Import DNA from JSON file
@@ -139,11 +140,11 @@ export default function DNALab() {
         source_url: importedData.source_url || null,
       });
 
-      toast({ title: "Imported", description: `DNA "${importedData.name}" imported successfully` });
+      toast({ title: t('dnaLab.imported'), description: `DNA "${importedData.name}" imported successfully` });
     } catch (error) {
       console.error("Import error:", error);
       toast({
-        title: "Import Failed",
+        title: t('dnaLab.importFailed'),
         description: error instanceof Error ? error.message : "Failed to import DNA file",
         variant: "destructive"
       });
@@ -372,10 +373,10 @@ export default function DNALab() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
         <div className="space-y-2">
           <Label className="text-xs uppercase text-muted-foreground flex items-center gap-1.5">
-            <PenLine className="h-3 w-3" /> Title
+            <PenLine className="h-3 w-3" /> {t('dnaLab.variant.title')}
           </Label>
           <Input
-            placeholder="e.g., How I built a SaaS in 2 days"
+            placeholder={t('dnaLab.variant.titlePlaceholder')}
             value={variant.title}
             onChange={(e) => updateVariant(type, variant.id, "title", e.target.value)}
             className="rounded-xl bg-background"
@@ -383,7 +384,7 @@ export default function DNALab() {
         </div>
         <div className="space-y-2">
           <Label className="text-xs uppercase text-muted-foreground flex items-center gap-1.5">
-            <Globe className="h-3 w-3" /> YouTube URL
+            <Globe className="h-3 w-3" /> {t('dnaLab.variant.youtubeUrl')}
           </Label>
           <div className="flex gap-2">
             <Input
@@ -402,7 +403,7 @@ export default function DNALab() {
               {fetchingVariantId === variant.id ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                "Get"
+                t('dnaLab.variant.get')
               )}
             </Button>
           </div>
@@ -416,15 +417,15 @@ export default function DNALab() {
       >
         <TabsList className="bg-background/50 w-full justify-start">
           <TabsTrigger value="transcript" className="flex items-center gap-1.5">
-            <FileText className="h-3 w-3" /> Script / Transcript
+            <FileText className="h-3 w-3" /> {t('dnaLab.variant.transcript')}
           </TabsTrigger>
           <TabsTrigger value="comments" className="flex items-center gap-1.5">
-            <MessageSquare className="h-3 w-3" /> Comments / Feedback
+            <MessageSquare className="h-3 w-3" /> {t('dnaLab.variant.comments')}
           </TabsTrigger>
         </TabsList>
         <TabsContent value="transcript" className="mt-2">
           <Textarea
-            placeholder="Paste content here..."
+            placeholder={t('dnaLab.variant.pastePlaceholder')}
             value={variant.transcript}
             onChange={(e) => updateVariant(type, variant.id, "transcript", e.target.value)}
             className="min-h-[120px] rounded-xl bg-background resize-none"
@@ -432,7 +433,7 @@ export default function DNALab() {
         </TabsContent>
         <TabsContent value="comments" className="mt-2">
           <Textarea
-            placeholder="Paste comments or feedback here..."
+            placeholder={t('dnaLab.variant.commentsPlaceholder')}
             value={variant.comments}
             onChange={(e) => updateVariant(type, variant.id, "comments", e.target.value)}
             className="min-h-[120px] rounded-xl bg-background resize-none"
@@ -442,10 +443,10 @@ export default function DNALab() {
 
       <div className="space-y-2">
         <Label className="text-xs uppercase text-muted-foreground flex items-center gap-1.5">
-          <FileText className="h-3 w-3" /> Description / Notes
+          <FileText className="h-3 w-3" /> {t('dnaLab.variant.notes')}
         </Label>
         <Textarea
-          placeholder="e.g., A quick breakdown of the tech stack..."
+          placeholder={t('dnaLab.variant.notesPlaceholder')}
           value={variant.notes}
           onChange={(e) => updateVariant(type, variant.id, "notes", e.target.value)}
           className="min-h-[80px] rounded-xl bg-background resize-none"
@@ -457,8 +458,9 @@ export default function DNALab() {
   // Show DNA detail view
   if (viewingDna) {
     return (
-      <DNADetailView
-        dna={viewingDna}
+      <DNAView
+        mode="detail"
+        savedDna={viewingDna}
         onBack={() => setViewingDna(null)}
         onUpdate={(updates) => updateDna(viewingDna.id, updates)}
         onExport={handleExportDna}
@@ -470,10 +472,11 @@ export default function DNALab() {
   // Show preview if DNA is extracted
   if (showPreview && extractedDna) {
     return (
-      <DNAPreview
-        dna={extractedDna}
+      <DNAView
+        mode="preview"
+        extractedDna={extractedDna}
+        onBack={handleCancelPreview}
         onSave={handleSaveDna}
-        onCancel={handleCancelPreview}
         saving={saving}
       />
     );
@@ -484,8 +487,8 @@ export default function DNALab() {
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">DNA Lab</h1>
-          <p className="text-muted-foreground">Extract viral patterns from successful content</p>
+          <h1 className="text-2xl font-bold tracking-tight">{t('dnaLab.title')}</h1>
+          <p className="text-muted-foreground">{t('dnaLab.subtitle')}</p>
         </div>
         <div className="flex gap-2 flex-wrap">
           <input
@@ -497,24 +500,24 @@ export default function DNALab() {
           />
           <Button variant="outline" className="gap-2 rounded-xl" onClick={handleImportClick}>
             <Upload className="h-4 w-4" />
-            Import
+            {t('common.import')}
           </Button>
           <Dialog open={manualDialogOpen} onOpenChange={setManualDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" className="gap-2 rounded-xl">
                 <PenLine className="h-4 w-4" />
-                Write
+                {t('common.write')}
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg">
               <DialogHeader>
-                <DialogTitle>Create DNA Manually</DialogTitle>
+                <DialogTitle>{t('dnaLab.manual.title')}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 pt-4">
                 <div className="space-y-2">
-                  <Label>Name *</Label>
+                  <Label>{t('dnaLab.manual.name')} *</Label>
                   <Input
-                    placeholder="e.g., Storytelling Master"
+                    placeholder={t('dnaLab.manual.namePlaceholder')}
                     value={manualDna.name}
                     onChange={(e) => setManualDna(prev => ({ ...prev, name: e.target.value }))}
                     className="rounded-xl"
@@ -522,18 +525,18 @@ export default function DNALab() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Niche</Label>
+                    <Label>{t('dnaLab.manual.niche')}</Label>
                     <Input
-                      placeholder="e.g., Technology"
+                      placeholder={t('dnaLab.manual.nichePlaceholder')}
                       value={manualDna.niche}
                       onChange={(e) => setManualDna(prev => ({ ...prev, niche: e.target.value }))}
                       className="rounded-xl"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Tone</Label>
+                    <Label>{t('dnaLab.manual.tone')}</Label>
                     <Input
-                      placeholder="e.g., Energetic"
+                      placeholder={t('dnaLab.manual.tonePlaceholder')}
                       value={manualDna.tone}
                       onChange={(e) => setManualDna(prev => ({ ...prev, tone: e.target.value }))}
                       className="rounded-xl"
@@ -541,43 +544,43 @@ export default function DNALab() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Hook Type</Label>
+                  <Label>{t('dnaLab.manual.hookType')}</Label>
                   <Input
-                    placeholder="e.g., Question, Story, Statistic"
+                    placeholder={t('dnaLab.manual.hookTypePlaceholder')}
                     value={manualDna.hookType}
                     onChange={(e) => setManualDna(prev => ({ ...prev, hookType: e.target.value }))}
                     className="rounded-xl"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Patterns (comma separated)</Label>
+                  <Label>{t('dnaLab.manual.patterns')}</Label>
                   <Input
-                    placeholder="e.g., Emotional Hook, Three-Act Structure"
+                    placeholder={t('dnaLab.manual.patternsPlaceholder')}
                     value={manualDna.patterns}
                     onChange={(e) => setManualDna(prev => ({ ...prev, patterns: e.target.value }))}
                     className="rounded-xl"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Structure (comma separated)</Label>
+                  <Label>{t('dnaLab.manual.structure')}</Label>
                   <Input
-                    placeholder="e.g., Hook, Problem, Solution, CTA"
+                    placeholder={t('dnaLab.manual.structurePlaceholder')}
                     value={manualDna.structure}
                     onChange={(e) => setManualDna(prev => ({ ...prev, structure: e.target.value }))}
                     className="rounded-xl"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Pacing</Label>
+                  <Label>{t('dnaLab.manual.pacing')}</Label>
                   <Input
-                    placeholder="e.g., Fast-paced with quick cuts"
+                    placeholder={t('dnaLab.manual.pacingPlaceholder')}
                     value={manualDna.pacing}
                     onChange={(e) => setManualDna(prev => ({ ...prev, pacing: e.target.value }))}
                     className="rounded-xl"
                   />
                 </div>
                 <Button onClick={handleManualCreate} className="w-full rounded-xl">
-                  Create DNA
+                  {t('dnaLab.createDna')}
                 </Button>
               </div>
             </DialogContent>
@@ -587,7 +590,7 @@ export default function DNALab() {
             onClick={() => setActiveMainTab("extract")}
           >
             <Plus className="h-4 w-4" />
-            Extract New DNA
+            {t('dnaLab.extractNewDna')}
           </Button>
         </div>
       </div>
@@ -595,10 +598,10 @@ export default function DNALab() {
       <Tabs value={activeMainTab} onValueChange={setActiveMainTab} className="space-y-6">
         <TabsList className="bg-muted/50 p-1 rounded-xl">
           <TabsTrigger value="library" className="rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm">
-            Library
+            {t('dnaLab.library')}
           </TabsTrigger>
           <TabsTrigger value="extract" className="rounded-lg data-[state=active]:bg-card data-[state=active]:shadow-sm">
-            Extract
+            {t('dnaLab.extract')}
           </TabsTrigger>
         </TabsList>
 
@@ -620,7 +623,7 @@ export default function DNALab() {
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-green-500">
                 <Check className="h-5 w-5" />
-                <h3 className="font-semibold text-lg">Virals</h3>
+                <h3 className="font-semibold text-lg">{t('dnaLab.virals')}</h3>
               </div>
               <div className="space-y-6">
                 {viralVariants.map((variant, index) => renderVariantCard(variant, "viral", index))}
@@ -632,7 +635,7 @@ export default function DNALab() {
                   onClick={addViralVariant}
                 >
                   <Plus className="h-4 w-4" />
-                  Add Viral
+                  {t('dnaLab.addViral')}
                 </Button>
               </FeatureGate>
             </div>
@@ -642,7 +645,7 @@ export default function DNALab() {
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-red-500">
                   <Trash2 className="h-5 w-5" />
-                  <h3 className="font-semibold text-lg">Flops</h3>
+                  <h3 className="font-semibold text-lg">{t('dnaLab.flops')}</h3>
                 </div>
                 <div className="space-y-6">
                   {flopVariants.map((variant, index) => renderVariantCard(variant, "flop", index))}
@@ -653,7 +656,7 @@ export default function DNALab() {
                   onClick={addFlopVariant}
                 >
                   <Plus className="h-4 w-4" />
-                  Add Flop
+                  {t('dnaLab.addFlop')}
                 </Button>
               </div>
             </FeatureGate>
@@ -664,9 +667,9 @@ export default function DNALab() {
             <GlassCardContent className="p-4">
               <div className="flex flex-col lg:flex-row gap-4 items-end">
                 <div className="flex-1 space-y-2 w-full">
-                  <Label className="text-xs uppercase text-muted-foreground">Override Logic</Label>
+                  <Label className="text-xs uppercase text-muted-foreground">{t('dnaLab.overrideLogic')}</Label>
                   <Input
-                    placeholder="Override default analysis logic..."
+                    placeholder={t('dnaLab.overrideLogicPlaceholder')}
                     value={overrideLogic}
                     onChange={(e) => setOverrideLogic(e.target.value)}
                     className="rounded-xl bg-muted"
@@ -677,14 +680,14 @@ export default function DNALab() {
                     <ModelSelector
                       value={selectedModel}
                       onChange={setSelectedModel}
-                      label="AI Model"
+                      label={t('dnaLab.aiModel')}
                       compact={false}
                     />
                   </div>
                   <div className="space-y-2 flex-1 lg:flex-none">
                     <Label className="flex items-center gap-2">
                       <Globe className="h-4 w-4 text-primary" />
-                      Language
+                      {t('dnaLab.language')}
                     </Label>
                     <Select value={language} onValueChange={setLanguage}>
                       <SelectTrigger className="w-full lg:w-[140px] rounded-xl">
@@ -710,7 +713,7 @@ export default function DNALab() {
                     ) : (
                       <RotateCw className="h-4 w-4" />
                     )}
-                    {scanning ? "Scanning..." : "Analyze & Extract DNA"}
+                    {scanning ? t('dnaLab.analyzing') : t('dnaLab.analyzeExtract')}
                   </Button>
                 </div>
               </div>
@@ -722,12 +725,12 @@ export default function DNALab() {
       <Dialog open={showScanDialog} onOpenChange={setShowScanDialog}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Content Pre-Scan Results</DialogTitle>
+            <DialogTitle>{t('dnaLab.scanResults.title')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="flex items-center gap-2 p-3 bg-blue-500/10 text-blue-500 rounded-lg border border-blue-500/20">
               <RotateCw className="h-5 w-5" />
-              <p className="text-sm">We scanned your inputs. Review and uncheck any outliers (e.g., wrong niche/tone) before deep analysis.</p>
+              <p className="text-sm">{t('dnaLab.scanResults.description')}</p>
             </div>
 
             <div className="max-h-[300px] overflow-y-auto space-y-2">
@@ -746,12 +749,12 @@ export default function DNALab() {
                     <div className="flex-1 space-y-1">
                       <div className="flex items-center justify-between">
                         <h4 className="font-medium text-sm truncate">{res.title || `${res.type === 'viral' ? 'Viral' : 'Flop'} Video #${res.index + 1}`}</h4>
-                        {res.isOutlier && <Badge variant="destructive" className="text-[10px] h-5">Outlier</Badge>}
+                        {res.isOutlier && <Badge variant="destructive" className="text-[10px] h-5">{t('dnaLab.scanResults.outlier')}</Badge>}
                       </div>
                       <div className="flex gap-4 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1"><span className="font-semibold text-foreground">Topic:</span> {res.topic}</span>
-                        <span className="flex items-center gap-1"><span className="font-semibold text-foreground">Tone:</span> {res.tone}</span>
-                        <span className="flex items-center gap-1"><span className="font-semibold text-foreground">Quality:</span> {res.qualityScore}/100</span>
+                        <span className="flex items-center gap-1"><span className="font-semibold text-foreground">{t('dnaLab.scanResults.topic')}:</span> {res.topic}</span>
+                        <span className="flex items-center gap-1"><span className="font-semibold text-foreground">{t('dnaLab.scanResults.tone')}:</span> {res.tone}</span>
+                        <span className="flex items-center gap-1"><span className="font-semibold text-foreground">{t('dnaLab.scanResults.quality')}:</span> {res.qualityScore}/100</span>
                       </div>
                       {res.reason && <p className="text-xs text-red-500 italic mt-1">⚠️ {res.reason}</p>}
                     </div>
@@ -761,9 +764,9 @@ export default function DNALab() {
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="ghost" onClick={() => setShowScanDialog(false)}>Cancel</Button>
+              <Button variant="ghost" onClick={() => setShowScanDialog(false)}>{t('common.cancel')}</Button>
               <Button onClick={handleProceedToExtract} disabled={selectedScanKeys.length === 0}>
-                Proceed with {selectedScanKeys.length} Videos
+                {t('dnaLab.scanResults.proceed')} {selectedScanKeys.length} {t('dnaLab.scanResults.videos')}
               </Button>
             </div>
           </div>

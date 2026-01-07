@@ -10,10 +10,12 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { FeatureGate } from "@/components/subscription";
 import { ProjectLibrary } from "./components/ProjectLibrary";
 import { ResearchWizard } from "./components/ResearchWizard";
+import { useLanguage } from "@/hooks/useLanguage";
 import type { TubeCloneProject } from "./types";
 
 export default function TubeClone() {
     const { projects, loading, currentProject, createProject, setCurrentProject, deleteProject } = useTubeClone();
+    const { t } = useLanguage();
     const [activeTab, setActiveTab] = useState<"library" | "research">("library");
     const [isCreating, setIsCreating] = useState(false);
 
@@ -42,8 +44,8 @@ export default function TubeClone() {
                             <Search className="h-5 w-5 text-primary" />
                         </div>
                         <div>
-                            <h1 className="text-2xl font-bold">TubeClone</h1>
-                            <p className="text-muted-foreground">Research & optimize your YouTube metadata</p>
+                            <h1 className="text-2xl font-bold">{t('tubeClone.title')}</h1>
+                            <p className="text-muted-foreground">{t('tubeClone.subtitle')}</p>
                         </div>
                     </div>
                     <Button
@@ -52,7 +54,7 @@ export default function TubeClone() {
                         className="gap-2 rounded-xl shadow-lg shadow-primary/20"
                     >
                         {isCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                        New Research
+                        {t('tubeClone.newResearch')}
                     </Button>
                 </div>
 
@@ -61,11 +63,11 @@ export default function TubeClone() {
                     <TabsList className="grid w-full max-w-md grid-cols-2">
                         <TabsTrigger value="library" className="gap-2">
                             <FolderOpen className="h-4 w-4" />
-                            Library
+                            {t('tubeClone.library')}
                         </TabsTrigger>
                         <TabsTrigger value="research" className="gap-2" disabled={!currentProject}>
                             <Play className="h-4 w-4" />
-                            Research
+                            {t('tubeClone.research')}
                         </TabsTrigger>
                     </TabsList>
 
@@ -85,7 +87,7 @@ export default function TubeClone() {
                         ) : (
                             <div className="flex flex-col items-center justify-center py-12">
                                 <Search className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                                <p className="text-muted-foreground">Select or create a project to start research</p>
+                                <p className="text-muted-foreground">{t('tubeClone.selectOrCreate')}</p>
                             </div>
                         )}
                     </TabsContent>

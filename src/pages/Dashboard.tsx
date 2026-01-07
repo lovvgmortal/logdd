@@ -14,19 +14,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-const quickActions = [{
-  title: "Extract DNA",
-  description: "Analyze viral content patterns",
-  icon: Dna,
-  to: "/dna-lab"
-}, {
-  title: "New Script",
-  description: "Create content with AI",
-  icon: PenTool,
-  to: "/writer"
-}];
+import { useLanguage } from "@/hooks/useLanguage";
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const {
     toast
   } = useToast();
@@ -69,6 +60,19 @@ export default function Dashboard() {
   // Calculate stats
   const totalProjects = scripts.length;
   const dnaTemplates = dnas.length;
+
+  // Quick actions with translations
+  const quickActions = [{
+    title: t('dashboard.quickActions.extractDna'),
+    description: t('dashboard.quickActions.extractDnaDesc'),
+    icon: Dna,
+    to: "/dna-lab"
+  }, {
+    title: t('dashboard.quickActions.newScript'),
+    description: t('dashboard.quickActions.newScriptDesc'),
+    icon: PenTool,
+    to: "/writer"
+  }];
 
   // Format credits display - show total usage
   const getCreditsDisplay = () => {
@@ -130,14 +134,14 @@ export default function Dashboard() {
   return <div className="p-4 md:p-6 lg:p-8 space-y-6">
     {/* Compact Stats Row */}
     <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-      <CompactStatCard title="Total Projects" value={totalProjects} icon={BarChart3} iconColor="text-blue-500" />
-      <CompactStatCard title="DNA Templates" value={dnaTemplates} icon={Sparkles} iconColor="text-purple-500" />
+      <CompactStatCard title={t('dashboard.stats.totalProjects')} value={totalProjects} icon={BarChart3} iconColor="text-blue-500" />
+      <CompactStatCard title={t('dashboard.stats.dnaTemplates')} value={dnaTemplates} icon={Sparkles} iconColor="text-purple-500" />
       <div className="flex items-center justify-between p-4 rounded-2xl border border-border/50 bg-card/80">
         <div className="flex items-center gap-3">
           <div className="rounded-xl bg-emerald-500/10 p-2.5">
             <CreditCard className="h-5 w-5 text-emerald-500" />
           </div>
-          <span className="text-sm font-medium text-muted-foreground">Credits Used</span>
+          <span className="text-sm font-medium text-muted-foreground">{t('dashboard.stats.creditsUsed')}</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-lg font-semibold">{getCreditsDisplay()}</span>
@@ -157,7 +161,7 @@ export default function Dashboard() {
           <div className="rounded-xl bg-blue-500/10 p-2.5">
             <Facebook className="h-5 w-5 text-blue-500" />
           </div>
-          <span className="text-sm font-medium text-muted-foreground">Contact</span>
+          <span className="text-sm font-medium text-muted-foreground">{t('dashboard.stats.contact')}</span>
         </div>
         <span className="text-lg font-semibold">LONG
         </span>
@@ -169,7 +173,7 @@ export default function Dashboard() {
       <div>
         {selectedFolder ? <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" onClick={() => setSelectedFolderId(null)}>
-            ← Back
+            ← {t('common.back')}
           </Button>
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -181,19 +185,19 @@ export default function Dashboard() {
             </p>
           </div>
         </div> : <>
-          <h1 className="text-2xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">Manage your viral engineering projects.</p>
+          <h1 className="text-2xl font-bold">{t('dashboard.title')}</h1>
+          <p className="text-muted-foreground">{t('dashboard.subtitle')}</p>
         </>}
       </div>
       <div className="flex items-center gap-2">
         <Button variant="outline" size="sm" className="gap-2" onClick={() => setShowFolderDialog(true)}>
           <FolderPlus className="h-4 w-4" />
-          New Folder
+          {t('common.newFolder')}
         </Button>
         <Button size="sm" className="gap-2" asChild>
           <Link to="/writer">
             <Plus className="h-4 w-4" />
-            New Project
+            {t('common.newProject')}
           </Link>
         </Button>
       </div>
@@ -202,7 +206,7 @@ export default function Dashboard() {
     {/* Search Bar */}
     <div className="relative">
       <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-      <Input placeholder="Search projects and folders..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10" />
+      <Input placeholder={t('dashboard.search.placeholder')} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10" />
     </div>
 
     {/* Quick Actions - Only show on main view */}
@@ -212,7 +216,7 @@ export default function Dashboard() {
 
     {/* Folders - Only show on main view */}
     {!selectedFolderId && folders.length > 0 && <div className="space-y-4">
-      <h2 className="text-lg font-semibold">Folders</h2>
+      <h2 className="text-lg font-semibold">{t('dashboard.folders')}</h2>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {folders.map(folder => {
           const folderScriptCount = scripts.filter(s => (s as any).folder_id === folder.id).length;
@@ -241,7 +245,7 @@ export default function Dashboard() {
                     deleteFolder(folder.id);
                   }} className="text-destructive focus:text-destructive">
                     <Trash2 className="h-4 w-4 mr-2" />
-                    Delete
+                    {t('common.delete')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -254,7 +258,7 @@ export default function Dashboard() {
     {/* Project Grid */}
     <div className="space-y-4">
       <h2 className="text-lg font-semibold">
-        {selectedFolderId ? "Scripts" : "Recent Projects"}
+        {selectedFolderId ? t('dashboard.scripts') : t('dashboard.recentProjects')}
       </h2>
 
       {scriptsLoading ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -280,18 +284,18 @@ export default function Dashboard() {
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => openRenameDialog(script.id, script.title)}>
                   <Pencil className="h-4 w-4 mr-2" />
-                  Rename
+                  {t('common.rename')}
                 </DropdownMenuItem>
 
                 {folders.length > 0 && <DropdownMenuSub>
                   <DropdownMenuSubTrigger>
                     <ArrowRight className="h-4 w-4 mr-2" />
-                    Move to folder
+                    {t('dashboard.moveToFolder')}
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent>
                     {(script as any).folder_id && <DropdownMenuItem onClick={() => handleMoveToFolder(script.id, null)}>
                       <Folder className="h-4 w-4 mr-2" />
-                      Remove from folder
+                      {t('dashboard.removeFromFolder')}
                     </DropdownMenuItem>}
                     {folders.filter(f => f.id !== (script as any).folder_id).map(folder => <DropdownMenuItem key={folder.id} onClick={() => handleMoveToFolder(script.id, folder.id)}>
                       <Folder className="h-4 w-4 mr-2" />
@@ -304,7 +308,7 @@ export default function Dashboard() {
 
                 <DropdownMenuItem onClick={() => handleDeleteScript(script.id)} className="text-destructive focus:text-destructive">
                   <Trash2 className="h-4 w-4 mr-2" />
-                  Delete
+                  {t('common.delete')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -312,12 +316,12 @@ export default function Dashboard() {
         </div>)}
       </div> : <div className="rounded-2xl border border-dashed border-border/50 p-12 text-center">
         <p className="text-muted-foreground">
-          {searchQuery ? "No projects found matching your search." : selectedFolderId ? "No scripts in this folder yet." : "No projects yet. Create your first script!"}
+          {searchQuery ? t('dashboard.noProjectsSearch') : selectedFolderId ? t('dashboard.noScriptsFolder') : t('dashboard.noProjects')}
         </p>
         <Button className="mt-4" asChild>
           <Link to="/writer">
             <Plus className="mr-2 h-4 w-4" />
-            Create Script
+            {t('dashboard.createScript')}
           </Link>
         </Button>
       </div>}
@@ -327,17 +331,17 @@ export default function Dashboard() {
     <Dialog open={showFolderDialog} onOpenChange={setShowFolderDialog}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create New Folder</DialogTitle>
+          <DialogTitle>{t('dashboard.createFolder.title')}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label>Folder Name</Label>
-            <Input value={newFolderName} onChange={e => setNewFolderName(e.target.value)} placeholder="My folder..." onKeyDown={e => e.key === "Enter" && handleCreateFolder()} />
+            <Label>{t('dashboard.createFolder.label')}</Label>
+            <Input value={newFolderName} onChange={e => setNewFolderName(e.target.value)} placeholder={t('dashboard.createFolder.placeholder')} onKeyDown={e => e.key === "Enter" && handleCreateFolder()} />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setShowFolderDialog(false)}>Cancel</Button>
-          <Button onClick={handleCreateFolder}>Create</Button>
+          <Button variant="outline" onClick={() => setShowFolderDialog(false)}>{t('common.cancel')}</Button>
+          <Button onClick={handleCreateFolder}>{t('common.create')}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -346,17 +350,17 @@ export default function Dashboard() {
     <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Rename Project</DialogTitle>
+          <DialogTitle>{t('dashboard.renameProject.title')}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label>Project Name</Label>
-            <Input value={renameValue} onChange={e => setRenameValue(e.target.value)} placeholder="Project name..." onKeyDown={e => e.key === "Enter" && handleRenameScript()} />
+            <Label>{t('dashboard.renameProject.label')}</Label>
+            <Input value={renameValue} onChange={e => setRenameValue(e.target.value)} placeholder={t('dashboard.renameProject.placeholder')} onKeyDown={e => e.key === "Enter" && handleRenameScript()} />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setShowRenameDialog(false)}>Cancel</Button>
-          <Button onClick={handleRenameScript}>Save</Button>
+          <Button variant="outline" onClick={() => setShowRenameDialog(false)}>{t('common.cancel')}</Button>
+          <Button onClick={handleRenameScript}>{t('common.save')}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -13,6 +13,7 @@ import {
 import { History, Copy, Clock, Edit2, Check, X, Trash2, FileJson } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/hooks/useLanguage";
 
 import { ScoreResult } from "@/lib/script-generator";
 
@@ -49,6 +50,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export function VersionHistory({ versions, type, onRestore, onUpdateName, onDelete, renderInfo, disabled }: VersionHistoryProps) {
+  const { t } = useLanguage();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
@@ -61,8 +63,8 @@ export function VersionHistory({ versions, type, onRestore, onUpdateName, onDele
     setOpen(false);
     setSelectedVersion(null);
     toast({
-      title: "Restored",
-      description: `${type === "outline" ? "Outline" : "Script"} version loaded to editor`,
+      title: t('common.restored'),
+      description: t('common.restoredDesc'),
     });
   };
 
@@ -79,8 +81,8 @@ export function VersionHistory({ versions, type, onRestore, onUpdateName, onDele
       if (selectedVersion !== null) setSelectedVersion(null);
       setDeleteTarget(null);
       toast({
-        title: "Deleted",
-        description: "Version removed from history",
+        title: t('common.deleted'),
+        description: t('common.deletedDesc'),
       });
     }
   };
@@ -108,13 +110,13 @@ export function VersionHistory({ versions, type, onRestore, onUpdateName, onDele
     try {
       await navigator.clipboard.writeText(content);
       toast({
-        title: "Copied",
-        description: "Content copied to clipboard",
+        title: t('common.copied'),
+        description: t('common.copiedDesc'),
       });
     } catch (err) {
       toast({
-        title: "Error",
-        description: "Could not copy content",
+        title: t('common.error'),
+        description: t('common.copyError'),
         variant: "destructive",
       });
     }
@@ -148,14 +150,14 @@ export function VersionHistory({ versions, type, onRestore, onUpdateName, onDele
           className="gap-2"
         >
           <History className="h-4 w-4" />
-          History ({versions.length})
+          {t('common.history')} ({versions.length})
         </Button>
       </SheetTrigger>
       <SheetContent className="w-[400px] sm:w-[600px]">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <History className="h-5 w-5" />
-            {type === "outline" ? "Outline" : "Script"} History
+            {type === "outline" ? t('writer.steps.outline') : t('writer.steps.script')} {t('common.history')}
           </SheetTitle>
         </SheetHeader>
 
@@ -163,7 +165,7 @@ export function VersionHistory({ versions, type, onRestore, onUpdateName, onDele
           <div className="space-y-3 pr-4">
             {sortedVersions.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">
-                No versions saved yet
+                {t('common.noVersions')}
               </p>
             ) : (
               sortedVersions.map((version, index) => (
@@ -200,7 +202,7 @@ export function VersionHistory({ versions, type, onRestore, onUpdateName, onDele
                       ) : (
                         <div className="flex items-center gap-2 group">
                           <span className="text-foreground/90 font-semibold">
-                            {version.name || `Draft ${index + 1}`}
+                            {version.name || `${t('common.draft')} ${index + 1}`}
                           </span>
                           {onUpdateName && (
                             <Button
@@ -209,7 +211,7 @@ export function VersionHistory({ versions, type, onRestore, onUpdateName, onDele
                               className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleStartEditName(index, version.name || `Draft ${index + 1}`);
+                                handleStartEditName(index, version.name || `${t('common.draft')} ${index + 1}`);
                               }}
                             >
                               <Edit2 className="h-3 w-3 text-muted-foreground" />
@@ -239,7 +241,7 @@ export function VersionHistory({ versions, type, onRestore, onUpdateName, onDele
                   {/* Word count & copy */}
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs text-muted-foreground">
-                      {version.wordCount || 0} words
+                      {version.wordCount || 0} {t('common.words')}
                     </span>
                     {onDelete && (
                       <Button
@@ -278,7 +280,7 @@ export function VersionHistory({ versions, type, onRestore, onUpdateName, onDele
                           className="flex-1 gap-2"
                         >
                           <Edit2 className="h-4 w-4" />
-                          Edit in Main Editor
+                          {t('common.editInEditor')}
                         </Button>
                         <Button
                           size="sm"
@@ -290,7 +292,7 @@ export function VersionHistory({ versions, type, onRestore, onUpdateName, onDele
                           className="gap-2"
                         >
                           <Copy className="h-4 w-4" />
-                          Copy
+                          {t('common.copyBtn')}
                         </Button>
                       </div>
                     </div>
@@ -303,15 +305,15 @@ export function VersionHistory({ versions, type, onRestore, onUpdateName, onDele
         <AlertDialog open={!!deleteTarget} onOpenChange={(val) => !val && setDeleteTarget(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogTitle>{t('common.confirmDeleteTitle')}</AlertDialogTitle>
               <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete this version from history.
+                {t('common.confirmDeleteDesc')}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
               <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                Delete
+                {t('common.delete')}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
 import { usePersonas, Persona } from "@/hooks/usePersonas";
 import { useYoutubeComments } from "@/hooks/useYoutubeComments";
+import { useLanguage } from "@/hooks/useLanguage";
 
 const COLORS = [
   "bg-violet-500",
@@ -33,6 +34,7 @@ const AVAILABLE_MODELS = [
 
 export default function Personas() {
   const { personas, loading, createPersona, updatePersona, deletePersona, analyzePersona } = usePersonas();
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPersona, setEditingPersona] = useState<Persona | null>(null);
@@ -66,6 +68,13 @@ export default function Personas() {
   const [motivations, setMotivations] = useState("");
   const [objections, setObjections] = useState("");
 
+  // NEW ENHANCED FIELDS - Text inputs for AI to fill
+  const [trustProfilePrimary, setTrustProfilePrimary] = useState<string>('');
+  const [trustProfileSecondary, setTrustProfileSecondary] = useState<string>('');
+  const [trustProfileReasoning, setTrustProfileReasoning] = useState("");
+  const [actionBarriers, setActionBarriers] = useState<string>(''); // Text input for AI
+  const [attentionSpan, setAttentionSpan] = useState<string>(''); // Text input for AI
+
   // Comment limit slider
   const [commentLimit, setCommentLimit] = useState(200);
 
@@ -95,6 +104,13 @@ export default function Personas() {
     setObjections("");
     setTargetCountry("");
 
+    // Reset new enhanced fields
+    setTrustProfilePrimary('');
+    setTrustProfileSecondary('');
+    setTrustProfileReasoning("");
+    setActionBarriers('');
+    setAttentionSpan('');
+
     setEditingPersona(null);
   };
 
@@ -115,6 +131,17 @@ export default function Personas() {
     setMotivations(persona.motivations?.join(", ") || "");
     setObjections(persona.objections?.join(", ") || "");
     setTargetCountry(persona.target_country || "");
+
+    // Load new enhanced fields
+    if (persona.trust_profile) {
+      setTrustProfilePrimary(persona.trust_profile.primary || '');
+      setTrustProfileSecondary(persona.trust_profile.secondary || '');
+      setTrustProfileReasoning(persona.trust_profile.reasoning || "");
+    }
+    setActionBarriers(Array.isArray(persona.action_barriers) ? persona.action_barriers.join(', ') : '');
+    if (persona.content_consumption) {
+      setAttentionSpan(persona.content_consumption.attentionSpan || '');
+    }
 
     if (persona.content_sources && Array.isArray(persona.content_sources) && persona.content_sources.length > 0) {
       setSources(persona.content_sources);
@@ -224,6 +251,18 @@ export default function Personas() {
       motivations: motivations ? motivations.split(",").map(p => p.trim()).filter(Boolean) : null,
       objections: objections ? objections.split(",").map(p => p.trim()).filter(Boolean) : null,
       content_sources: sources, // Save sources
+
+      // NEW ENHANCED FIELDS
+      trust_profile: (trustProfilePrimary || trustProfileReasoning) ? {
+        primary: trustProfilePrimary || undefined,
+        secondary: trustProfileSecondary || undefined,
+        reasoning: trustProfileReasoning
+      } : null,
+      action_barriers: actionBarriers ? actionBarriers.split(',').map(b => b.trim()).filter(Boolean) : null,
+      content_consumption: attentionSpan ? {
+        attentionSpan: attentionSpan,
+        preferredFormats: []
+      } : null
     };
 
     // Include extended fields if available (from AI analysis)
@@ -273,12 +312,12 @@ export default function Personas() {
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Audience Personas</h1>
-          <p className="text-muted-foreground">Define and manage your target audiences (Manual or AI Analyzed)</p>
+          <h1 className="text-2xl font-bold tracking-tight">{t('personas.title')}</h1>
+          <p className="text-muted-foreground">{t('personas.subtitle')}</p>
         </div>
         <Button onClick={openCreateDialog} className="gap-2 rounded-xl shadow-lg shadow-primary/20">
           <Plus className="h-4 w-4" />
-          Create Persona
+          {t('personas.createPersona')}
         </Button>
       </div>
 
@@ -286,7 +325,7 @@ export default function Personas() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Search personas..."
+          placeholder={t('personas.searchPlaceholder')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-10 rounded-xl bg-card/50"
@@ -301,7 +340,7 @@ export default function Personas() {
       ) : filteredPersonas.length === 0 ? (
         <div className="text-center py-12">
           <Users className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-          <p className="text-muted-foreground">No personas yet. Create your first one!</p>
+          <p className="text-muted-foreground">{t('personas.noPersonas')}</p>
         </div>
       ) : (
         /* Personas Grid */
@@ -326,7 +365,7 @@ export default function Personas() {
                 </div>
                 <GlassCardTitle className="mt-3">{persona.name}</GlassCardTitle>
                 <GlassCardDescription>
-                  {persona.age_range && `Age ${persona.age_range}`}
+                  {persona.age_range && `${t('personas.age')} ${persona.age_range}`}
                   {persona.age_range && (persona.target_country || persona.platform) && " • "}
                   {persona.target_country && (
                     <span className="inline-flex items-center gap-1">
@@ -346,7 +385,7 @@ export default function Personas() {
                       <Brain className="h-4 w-4" />
                       Knowledge
                     </span>
-                    <span className="font-medium capitalize">{persona.knowledge_level || "Intermediate"}</span>
+                    <span className="font-medium capitalize">{persona.knowledge_level || t('personas.intermediate')}</span>
                   </div>
                   <Progress
                     value={getKnowledgeValue(persona.knowledge_level)}
@@ -357,19 +396,19 @@ export default function Personas() {
                 {/* Knowledge Profile (Extended) */}
                 {persona.knowledge_profile && (
                   <div className="space-y-2 p-3 rounded-lg bg-primary/5 border border-primary/10">
-                    <span className="text-xs font-semibold text-primary">3D Knowledge Profile</span>
+                    <span className="text-xs font-semibold text-primary">{t('personas.knowledgeProfile')}</span>
                     <div className="grid grid-cols-3 gap-2 text-xs">
                       <div className="text-center">
                         <div className="font-bold text-lg text-primary">{persona.knowledge_profile.domainKnowledge}</div>
-                        <div className="text-muted-foreground">Domain</div>
+                        <div className="text-muted-foreground">{t('personas.domain')}</div>
                       </div>
                       <div className="text-center">
                         <div className="font-bold text-lg text-primary">{persona.knowledge_profile.engagementDepth}</div>
-                        <div className="text-muted-foreground">Engagement</div>
+                        <div className="text-muted-foreground">{t('personas.engagement')}</div>
                       </div>
                       <div className="text-center">
                         <div className="font-bold text-lg text-primary">{persona.knowledge_profile.skepticismLevel}</div>
-                        <div className="text-muted-foreground">Skepticism</div>
+                        <div className="text-muted-foreground">{t('personas.skepticism')}</div>
                       </div>
                     </div>
                     {persona.knowledge_profile.reasoning && (
@@ -469,7 +508,7 @@ export default function Personas() {
                 {persona.preferred_tone && (
                   <div className="flex items-center gap-2 text-sm pt-2 border-t border-border/50">
                     <MessageCircle className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">Tone:</span>
+                    <span className="text-muted-foreground">{t('personas.tone')}:</span>
                     <span className="font-medium">{persona.preferred_tone}</span>
                   </div>
                 )}
@@ -483,26 +522,26 @@ export default function Personas() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingPersona ? "Edit Persona" : "Create Audience Persona"}</DialogTitle>
+            <DialogTitle>{editingPersona ? t('personas.dialog.editTitle') : t('personas.dialog.createTitle')}</DialogTitle>
             <DialogDescription>
-              Define your target audience manually or analyze content to reverse-engineer them.
+              {t('personas.dialog.description')}
             </DialogDescription>
           </DialogHeader>
 
           <Tabs defaultValue="analyze" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="manual">Manual Description</TabsTrigger>
-              <TabsTrigger value="analyze">Analyze Content (AI)</TabsTrigger>
+              <TabsTrigger value="manual">{t('personas.dialog.manualTab')}</TabsTrigger>
+              <TabsTrigger value="analyze">{t('personas.dialog.analyzeTab')}</TabsTrigger>
             </TabsList>
 
             {/* TAB: MANUAL */}
             <TabsContent value="manual" className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label>Description</Label>
+                <Label>{t('personas.dialog.descriptionLabel')}</Label>
                 <Textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Describe your target audience... e.g., Young professionals aged 25-35..."
+                  placeholder={t('personas.dialog.descriptionPlaceholder')}
                   className="min-h-[80px]"
                 />
                 <Button
@@ -513,7 +552,7 @@ export default function Personas() {
                   className="w-full"
                 >
                   {analyzing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                  Format Description with AI
+                  {t('personas.dialog.formatWithAi')}
                 </Button>
               </div>
             </TabsContent>
@@ -525,7 +564,7 @@ export default function Personas() {
                   <div key={source.id} className="relative rounded-xl border border-border bg-muted/10 p-4 space-y-4">
                     <div className="flex items-center justify-between">
                       <h4 className="font-semibold text-sm flex items-center gap-2">
-                        <span className="bg-primary/10 text-primary px-2 py-0.5 rounded text-xs border border-primary/20">Source #{index + 1}</span>
+                        <span className="bg-primary/10 text-primary px-2 py-0.5 rounded text-xs border border-primary/20">{t('personas.dialog.source')} #{index + 1}</span>
                       </h4>
                       {sources.length > 1 && (
                         <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => removeSource(source.id)}>
@@ -537,11 +576,11 @@ export default function Personas() {
                     <div className="grid md:grid-cols-2 gap-4">
                       {/* Left Column: Script */}
                       <div className="space-y-2">
-                        <Label>Script / Transcript</Label>
+                        <Label>{t('personas.dialog.scriptLabel')}</Label>
                         <Textarea
                           value={source.script}
                           onChange={(e) => updateSource(source.id, "script", e.target.value)}
-                          placeholder="Paste video transcript here..."
+                          placeholder={t('personas.dialog.scriptPlaceholder')}
                           className="min-h-[120px] resize-none"
                         />
                       </div>
@@ -550,7 +589,7 @@ export default function Personas() {
                       <div className="space-y-3">
                         {/* YouTube Fetcher (Mini version) */}
                         <div className="space-y-2">
-                          <Label>Import from YouTube (Optional)</Label>
+                          <Label>{t('personas.dialog.youtubeLabel')}</Label>
                           <div className="flex gap-2">
                             <div className="flex-1 relative">
                               <LinkIcon className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
@@ -582,17 +621,17 @@ export default function Personas() {
                               onChange={(e) => setCommentLimit(Number(e.target.value))}
                               className="flex-1 h-1.5 bg-muted rounded-full appearance-none cursor-pointer accent-primary"
                             />
-                            <span className="text-xs text-muted-foreground w-16 text-right">{commentLimit} max</span>
+                            <span className="text-xs text-muted-foreground w-16 text-right">{commentLimit} {t('personas.dialog.maxComments')}</span>
                           </div>
                         </div>
 
                         {/* Comments Area */}
                         <div className="space-y-2">
                           <div className="flex justify-between items-center">
-                            <Label>Comments</Label>
+                            <Label>{t('personas.dialog.commentsLabel')}</Label>
                             {source.fetchedCommentsCount ? (
                               <span className="text-[10px] text-green-600 font-medium">
-                                {source.fetchedCommentsCount} fetched
+                                {source.fetchedCommentsCount} {t('personas.dialog.fetched')}
                               </span>
                             ) : null}
                           </div>
@@ -613,7 +652,7 @@ export default function Personas() {
                   className="w-full border-dashed text-muted-foreground hover:text-foreground hover:border-primary/50"
                   onClick={addSource}
                 >
-                  <Plus className="mr-2 h-4 w-4" /> Add Another Source
+                  <Plus className="mr-2 h-4 w-4" /> {t('personas.dialog.addSource')}
                 </Button>
               </div>
 
@@ -626,7 +665,7 @@ export default function Personas() {
                   className="w-full bg-violet-600 hover:bg-violet-700 h-10 text-md shadow-lg shadow-violet-500/20"
                 >
                   {analyzing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Sparkles className="mr-2 h-5 w-5" />}
-                  Reverse-Engineer Audience with AI
+                  {t('personas.dialog.reverseEngineer')}
                 </Button>
               </div>
             </TabsContent>
@@ -636,33 +675,33 @@ export default function Personas() {
           <div className="grid gap-4 py-4 border-t border-border">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Name *</Label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Tech Enthusiast" />
+                <Label>{t('personas.dialog.nameLabel')} *</Label>
+                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('personas.dialog.namePlaceholder')} />
               </div>
               <div className="space-y-2">
-                <Label>Age Range</Label>
-                <Input value={ageRange} onChange={(e) => setAgeRange(e.target.value)} placeholder="e.g., 25-35" />
+                <Label>{t('personas.dialog.ageRangeLabel')}</Label>
+                <Input value={ageRange} onChange={(e) => setAgeRange(e.target.value)} placeholder={t('personas.dialog.ageRangePlaceholder')} />
               </div>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Knowledge Level</Label>
+                <Label>{t('personas.dialog.knowledgeLevelLabel')}</Label>
                 <Select value={knowledgeLevel} onValueChange={setKnowledgeLevel}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="complete-beginner">1 - Complete Beginner</SelectItem>
-                    <SelectItem value="beginner">2 - Beginner</SelectItem>
-                    <SelectItem value="intermediate">3 - Intermediate</SelectItem>
-                    <SelectItem value="advanced">4 - Advanced</SelectItem>
-                    <SelectItem value="expert">5 - Expert</SelectItem>
+                    <SelectItem value="complete-beginner">{t('personas.knowledge.beginner1')}</SelectItem>
+                    <SelectItem value="beginner">{t('personas.knowledge.beginner2')}</SelectItem>
+                    <SelectItem value="intermediate">{t('personas.knowledge.intermediate')}</SelectItem>
+                    <SelectItem value="advanced">{t('personas.knowledge.advanced')}</SelectItem>
+                    <SelectItem value="expert">{t('personas.knowledge.expert')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Platform</Label>
+                <Label>{t('personas.dialog.platformLabel')}</Label>
                 <Select value={platform} onValueChange={setPlatform}>
-                  <SelectTrigger><SelectValue placeholder="Select platform" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={t('personas.dialog.platformPlaceholder')} /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="YouTube">YouTube</SelectItem>
                     <SelectItem value="TikTok">TikTok</SelectItem>
@@ -676,47 +715,104 @@ export default function Personas() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Target Country / Region</Label>
+                <Label>{t('personas.dialog.targetCountryLabel')}</Label>
                 <Input
                   value={targetCountry}
                   onChange={(e) => setTargetCountry(e.target.value)}
-                  placeholder="e.g., USA, UK, Vietnam, Japan, Global..."
+                  placeholder={t('personas.dialog.targetCountryPlaceholder')}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Preferred Tone</Label>
+                <Label>{t('personas.dialog.toneLabel')}</Label>
                 <Input
                   value={preferredTone}
                   onChange={(e) => setPreferredTone(e.target.value)}
-                  placeholder="Casual & Direct, Motivational"
+                  placeholder={t('personas.dialog.tonePlaceholder')}
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label>Pain Points</Label>
+              <Label>{t('personas.dialog.painPointsLabel')}</Label>
               <Input
                 value={painPoints}
                 onChange={(e) => setPainPoints(e.target.value)}
-                placeholder="Time management, Career growth..."
+                placeholder={t('personas.dialog.painPointsPlaceholder')}
               />
             </div>
 
             {/* NEW FIELDS */}
             <div className="space-y-2">
-              <Label>Motivations (Why they watch)</Label>
+              <Label>{t('personas.dialog.motivationsLabel')}</Label>
               <Input
                 value={motivations}
                 onChange={(e) => setMotivations(e.target.value)}
-                placeholder="To get rich quick, To feel validated..."
+                placeholder={t('personas.dialog.motivationsPlaceholder')}
               />
             </div>
             <div className="space-y-2">
-              <Label>Objections (Why they skip)</Label>
+              <Label>{t('personas.dialog.objectionsLabel')}</Label>
               <Input
                 value={objections}
                 onChange={(e) => setObjections(e.target.value)}
-                placeholder="Too complicated, Fake guru vibes..."
+                placeholder={t('personas.dialog.objectionsPlaceholder')}
+              />
+            </div>
+
+            {/* ================================================== */}
+            {/* NEW ENHANCED FIELDS */}
+            {/* ================================================== */}
+
+            {/* Trust Profile */}
+            <div className="space-y-3 pt-4 border-t">
+              <Label className="text-sm font-medium text-blue-400">{t('personas.trustProfile.title')}</Label>
+
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">{t('personas.trustProfile.primaryLabel')}</Label>
+                <Input
+                  value={trustProfilePrimary}
+                  onChange={(e) => setTrustProfilePrimary(e.target.value)}
+                  placeholder={t('personas.trustProfile.primaryPlaceholder')}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">{t('personas.trustProfile.secondaryLabel')}</Label>
+                <Input
+                  value={trustProfileSecondary}
+                  onChange={(e) => setTrustProfileSecondary(e.target.value)}
+                  placeholder={t('personas.trustProfile.secondaryPlaceholder')}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">{t('personas.trustProfile.reasoningLabel')}</Label>
+                <Textarea
+                  value={trustProfileReasoning}
+                  onChange={(e) => setTrustProfileReasoning(e.target.value)}
+                  placeholder={t('personas.trustProfile.reasoningPlaceholder')}
+                  className="min-h-[60px] resize-none"
+                />
+              </div>
+            </div>
+
+            {/* Attention Span */}
+            <div className="space-y-2 pt-4 border-t">
+              <Label className="text-sm font-medium text-orange-400">{t('personas.attentionSpan.title')}</Label>
+              <Input
+                value={attentionSpan}
+                onChange={(e) => setAttentionSpan(e.target.value)}
+                placeholder={t('personas.attentionSpan.placeholder')}
+              />
+            </div>
+
+            {/* Action Barriers */}
+            <div className="space-y-2 pt-4 border-t">
+              <Label className="text-sm font-medium text-red-400">{t('personas.actionBarriers.title')}</Label>
+              <Input
+                value={actionBarriers}
+                onChange={(e) => setActionBarriers(e.target.value)}
+                placeholder={t('personas.actionBarriers.placeholder')}
               />
             </div>
           </div>
@@ -725,7 +821,7 @@ export default function Personas() {
             <div className="w-[200px]">
               <Select value={selectedModel} onValueChange={setSelectedModel}>
                 <SelectTrigger className="h-8 text-xs">
-                  <SelectValue placeholder="Select AI Model" />
+                  <SelectValue placeholder={t('personas.dialog.selectModelPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
                   {AVAILABLE_MODELS.map(m => (
@@ -737,10 +833,10 @@ export default function Personas() {
               </Select>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>{t('common.cancel')}</Button>
               <Button onClick={handleSave} disabled={saving || !name.trim()}>
                 {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                {editingPersona ? "Update" : "Create"}
+                {editingPersona ? t('common.update') : t('common.create')}
               </Button>
             </div>
           </DialogFooter>

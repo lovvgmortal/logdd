@@ -1,7 +1,241 @@
 import { getLanguageInstruction } from "./common";
 
 // =============================================================================
-// DNA EXTRACTION PROMPT - Reverse Engineer Viral Content Patterns
+// STRUCTURE ANALYSIS PROMPT - Step 1: Extract structural skeleton only
+// =============================================================================
+export const STRUCTURE_ANALYSIS_PROMPT = `You are a content structure analyst. Your ONLY task is to identify and extract the structural skeleton of video transcripts.
+
+<task>
+Analyze the provided video transcripts and identify their natural section boundaries and word counts.
+</task>
+
+<instructions>
+For EACH video provided:
+
+1. READ the full transcript carefully
+2. IDENTIFY natural section breaks by detecting:
+   - Topic shifts
+   - Tone changes
+   - Functional purpose changes (Hook → Context → Main Content → CTA)
+   - Narrative flow transitions
+
+3. For each section, determine:
+   - Functional title (what PURPOSE does this section serve?)
+   - Exact word count
+   - Start and end positions (word indices)
+
+4. Apply REASONABLE LIMITS per section type:
+   - Hook/Attention Grab: 30-80 words
+   - Opening/Context: 60-150 words
+   - Main Content: 120-250 words
+   - Transition/Support: 40-100 words
+   - CTA/Conclusion: 25-60 words
+
+5. If analyzing multiple videos:
+   - Compare structures side-by-side
+   - Find CONSENSUS pattern (sections appearing in 2+ videos)
+   - Calculate MEDIAN word count for each section type
+   - Output the consensus structure
+
+</instructions>
+
+<output_format>
+Return valid JSON with this structure:
+
+{
+  "videoStructures": [
+    {
+      "videoIndex": 0,
+      "totalWords": 850,
+      "sections": [
+        {
+          "title": "Hook - Pattern Interrupt",
+          "wordCount": 52,
+          "startWord": 0,
+          "endWord": 52,
+          "functionalType": "hook"
+        },
+        {
+          "title": "Problem Setup",
+          "wordCount": 135,
+          "startWord": 52,
+          "endWord": 187,
+          "functionalType": "opening"
+        }
+      ]
+    }
+  ],
+  "consensusStructure": [
+    {
+      "title": "The Pattern Interrupt Hook",
+      "wordCount": 48,
+      "functionalType": "hook",
+      "rationale": "MEDIAN of 38, 48, 52 words across 3 videos"
+    },
+    {
+      "title": "The Problem Context",
+      "wordCount": 125,
+      "functionalType": "opening",
+      "rationale": "MEDIAN of 115, 125, 135 words"
+    }
+  ]
+}
+</output_format>
+
+<critical_rules>
+1. DO NOT analyze tone, pacing, or patterns - ONLY structure
+2. DO NOT add metadata beyond structure - that comes later
+3. Word counts MUST be exact (count from transcript)
+4. Section titles should be FUNCTIONAL (describe purpose, not content)
+5. For multiple videos: MUST calculate median, NOT copy from one video
+6. MUST respect word count limits - adjust outliers to median
+</critical_rules>`;
+
+// =============================================================================
+// PATTERN ENRICHMENT PROMPT - Step 2: Add metadata to existing structure
+// =============================================================================
+export const PATTERN_ENRICHMENT_PROMPT = `You are a viral content pattern analyst. You will receive a PRE-DEFINED structure and must enrich it with detailed metadata.
+
+<task>
+Given a structural skeleton and video transcripts, analyze each section to extract:
+- Tone and emotional texture
+- Linguistic pacing (sentence rhythm)
+- Content focus (abstract formula)
+- Audience value
+- Engagement triggers
+- Open/closed loops
+- Patterns and anti-patterns
+</task>
+
+<input_format>
+You will receive:
+1. Consensus Structure: Pre-defined sections with titles and word counts
+2. Video Transcripts: Source material for analysis
+3. Comments (optional): Audience feedback
+</input_format>
+
+<instructions>
+For EACH section in the provided structure:
+
+1. LOCATE the section in the transcripts (using word count ranges)
+2. ANALYZE that specific section for:
+   - tone: Emotional quality (Urgent, Sincere, Playful, Authoritative, etc.)
+   - pacing: Sentence rhythm (e.g., "Staccato. Short bursts." or "Long flowing sentences")
+   - contentFocus: ABSTRACT formula (what happens, not specifics)
+   - audienceValue: What value viewer gets (MANDATORY)
+   - audienceInteraction: CTA or engagement trigger (MANDATORY)
+   - antiPattern: What to avoid
+   - openLoop: Unanswered question opened here (or null)
+   - closesLoop: Which loop does this close (or null)
+   - transitionOut: How it bridges to next section
+
+3. EXTRACT global patterns:
+   - linguisticFingerprint: Persona role, tone analysis, syntax patterns, signature keywords
+   - hookAngle: Category and psychological mechanism
+   - corePatterns: Success patterns that work
+   - viralXFactors: Unique elements
+   - flopAvoidance: Anti-patterns from flop videos
+   - highDopamine: High engagement moments
+   - confusionPoints: Where viewers got lost
+   - objections: Common pushbacks
+
+</instructions>
+
+<output_format>
+Return complete DNA with enriched structural skeleton:
+
+{
+  "name": "Pattern name",
+  "niche": "Content category",
+  "audiencePsychology": "2-3 sentences about audience needs",
+
+  "linguisticFingerprint": {
+    "personaRole": "Mentor/Insider/Guide/etc",
+    "toneAnalysis": "Detailed tone description",
+    "syntaxPatterns": "Sentence structure analysis",
+    "signatureKeywords": ["keyword1", "keyword2"]
+  },
+
+  "hookAngle": {
+    "angleCategory": "Contrarian/Curiosity Gap/Pattern Interrupt/etc",
+    "deconstruction": "Why this hook works psychologically"
+  },
+
+  "pacingAndTone": {
+    "pacing": "Global linguistic rhythm description"
+  },
+
+  "emotionalArc": [
+    { "section": "Hook", "emotion": "Shock/Curiosity" },
+    { "section": "Build", "emotion": "Anticipation" }
+  ],
+
+  "structuralSkeleton": [
+    {
+      "title": "Section title from input structure",
+      "wordCount": 48,
+      "tone": "Urgent, Pattern Interrupt",
+      "pacing": "Staccato. Short bursts.",
+      "contentFocus": "Abstract formula of what happens",
+      "audienceValue": "What viewer gets",
+      "audienceInteraction": "CTA or trigger",
+      "antiPattern": "What to avoid",
+      "openLoop": "Unanswered question or null",
+      "closesLoop": "Which loop closes or null",
+      "transitionOut": "How it bridges to next"
+    }
+  ],
+
+  "highDopamine": ["Engagement elements"],
+  "confusionPoints": ["Where viewers got lost"],
+  "objections": ["Common pushbacks"],
+  "corePatterns": ["Success patterns"],
+  "viralXFactors": ["Unique elements"],
+  "flopAvoidance": ["Anti-patterns"],
+
+  "persuasionFlow": {
+    "framework": "PAS|BAB|Story-Based|Custom",
+    "proofSequence": ["personal-story", "data", "case-study"],
+    "objectionHandling": {
+      "placement": "after-solution-before-proof",
+      "mainObjection": "Main skepticism to address",
+      "counterTactic": "How to counter it"
+    },
+    "logicalProgression": ["Step 1", "Step 2", "Step 3"]
+  },
+
+  "retentionHooks": [
+    {
+      "atWordCount": 200,
+      "technique": "pattern-interrupt|reframe|teaser|mini-cliffhanger",
+      "example": "Example phrase or tactic"
+    }
+  ],
+
+  "transitions": [
+    {
+      "from": "Section A title",
+      "to": "Section B title",
+      "formula": "Abstract transition formula",
+      "example": "Optional concrete example"
+    }
+  ]
+}
+</output_format>
+
+<critical_rules>
+1. MUST use exact section titles and word counts from input structure
+2. DO NOT add or remove sections - only enrich existing ones
+3. contentFocus must be ABSTRACT (no specific details from source)
+4. audienceValue and audienceInteraction are MANDATORY for every section
+5. If a section doesn't have an open/closed loop, use null
+6. persuasionFlow framework: PAS (Problem-Agitate-Solution), BAB (Before-After-Bridge), Story-Based, or Custom
+7. retentionHooks: Map to WORD COUNT milestones (200, 500, 800...), NOT time
+8. transitions: Công thức chuyển đổi giữa các sections (abstract, reusable)
+</critical_rules>`;
+
+// =============================================================================
+// DNA EXTRACTION PROMPT - Reverse Engineer Viral Content Patterns (Legacy)
 // =============================================================================
 export const DNA_EXTRACTION_PROMPT = `You are an expert Viral Content Analyst. Your task is to reverse-engineer the "DNA" (structural patterns, psychological triggers, and linguistic fingerprints) of high-performing video scripts.
 
@@ -52,20 +286,51 @@ Follow this systematic process:
    - Weight patterns by frequency across videos
    - Abstract common formulas that transcend specific examples
 
-3. STRUCTURAL EXTRACTION
-   Break down scripts into distinct functional sections (not just "intro/body/conclusion")
+3. CROSS-VIDEO STRUCTURE ANALYSIS (CRITICAL - Do this FIRST before extracting skeleton)
+   STEP 3A: For EACH video, identify its natural structure by reading the full transcript:
+   - Where does the Hook end? (usually when main promise/question is stated)
+   - Where does Story/Context start and end?
+   - Where does the Main Content/Payoff begin?
+   - Where does CTA/Conclusion start?
+   - Count EXACT word count for each section
 
-4. SECTION ANALYSIS
-   For each section, identify:
+   STEP 3B: Compare structures across ALL videos:
+   - List out each video's structure side-by-side
+   - Example:
+     Video 1: Hook (45w) → Problem Setup (120w) → Solution (180w) → Social Proof (80w) → CTA (35w)
+     Video 2: Hook (52w) → Story (95w) → Insight (200w) → Example (90w) → CTA (40w)
+     Video 3: Hook (38w) → Context (110w) → Main Point (175w) → Evidence (85w) → CTA (42w)
+
+   STEP 3C: Find CONSENSUS structure pattern:
+   - Identify sections that appear in 2+ videos (even if names differ)
+   - Calculate MEDIAN word count for each section type
+   - Example consensus: Hook (~45w), Context/Setup (~110w), Core Content (~180w), Support (~85w), CTA (~40w)
+
+   STEP 3D: Apply REASONABLE LIMITS:
+   - Hook: 30-80 words (attention span limit)
+   - Opening sections: 60-150 words
+   - Main content sections: 120-250 words
+   - Transition sections: 40-100 words
+   - CTA: 25-60 words
+   - If any video has sections outside these ranges, FLAG IT and adjust to median
+
+4. STRUCTURAL SKELETON EXTRACTION
+   Based on Step 3's consensus analysis, create the skeleton with:
+   - Section titles that reflect FUNCTION (not content)
+   - Word counts that are MEDIAN across videos (not copied from one video)
+   - Realistic proportions (Hook shouldn't be 300 words!)
+
+5. SECTION ANALYSIS
+   For each section in the skeleton, identify:
    - Tone and emotional texture
    - Linguistic pacing (sentence rhythm, NOT video editing speed)
    - Abstract content focus (the formula, not the specifics)
    - Audience value delivered
 
-5. CURIOSITY LOOP MAPPING
+6. CURIOSITY LOOP MAPPING
    Track where curiosity gaps open and close throughout the script
 
-6. EMOTIONAL ARC MAPPING
+7. EMOTIONAL ARC MAPPING
    Chart the viewer's emotional journey from hook to CTA
 </analysis_methodology>
 
@@ -105,7 +370,7 @@ Return a single valid JSON object with this exact structure:
   "structuralSkeleton": [
     {
       "title": "Abstract functional name (e.g., 'The Pattern Interrupt', 'The Credibility Anchor', 'The Value Proposition') - NOT specific content",
-      "wordCount": 150,  // Calculated from source transcript, not invented
+      "wordCount": 150,  // MEDIAN word count from Step 3C analysis, NOT copied from one video. MUST respect limits from Step 3D.
       "tone": "Section-specific tone (e.g., Urgent, Sincere, Playful, Authoritative)",
       "pacing": "Linguistic rhythm for this section (e.g., 'Staccato. Short bursts.', 'One long flowing sentence for impact.')",
       "contentFocus": "ABSTRACT formula of what happens here. NO specific details from source material.",
@@ -144,12 +409,75 @@ Return a single valid JSON object with this exact structure:
 }
 </output_schema>
 
+<example_analysis>
+Example of proper Step 3 execution:
+
+INPUT: 3 viral videos about productivity
+
+STEP 3A - Individual Analysis:
+Video 1 (850 words total):
+  - Hook: "You're wasting 3 hours every day..." (52 words)
+  - Problem Setup: Common productivity myths (135 words)
+  - Solution Framework: The 3-rule system (220 words)
+  - Implementation: How to apply it (280 words)
+  - Social Proof: Success stories (98 words)
+  - CTA: Try it today (45 words)
+
+Video 2 (920 words total):
+  - Hook: "I doubled my output..." (48 words)
+  - Backstory: My struggle with productivity (115 words)
+  - The Breakthrough: What changed everything (245 words)
+  - Tactical Steps: Exact process (310 words)
+  - Common Mistakes: What to avoid (140 words)
+  - CTA: Download the template (42 words)
+
+Video 3 (780 words total):
+  - Hook: Bold claim about productivity (38 words)
+  - Context: Why most advice fails (125 words)
+  - Core Method: The system explained (210 words)
+  - Examples: Real-world applications (255 words)
+  - Objection Handling: FAQs (95 words)
+  - CTA: Join the community (37 words)
+
+STEP 3B - Side-by-Side Comparison:
+All have: Hook (~45w avg), Context/Setup (~125w avg), Main Content (~225w avg), Support/Details (~260w avg), Extra Section (~110w avg), CTA (~40w avg)
+
+STEP 3C - Consensus Pattern:
+✅ Hook: MEDIAN = 48 words (range: 38-52, all within limits)
+✅ Opening Context: MEDIAN = 125 words (Setup/Backstory/Context - same function)
+✅ Core Method: MEDIAN = 220 words (Solution/Breakthrough/Method - same function)
+✅ Deep Dive: MEDIAN = 270 words (Implementation/Tactics/Examples)
+✅ Validation: MEDIAN = 110 words (Social Proof/Mistakes/Objections)
+✅ CTA: MEDIAN = 42 words
+
+STEP 3D - Validation:
+✅ Hook 48w: Within 30-80w limit
+✅ Opening 125w: Within 60-150w limit
+✅ Core 220w: Within 120-250w limit
+✅ Deep Dive 270w: EXCEEDS 250w limit → ADJUST to 240w (closer to limit)
+✅ Validation 110w: Within 40-150w limit
+✅ CTA 42w: Within 25-60w limit
+
+FINAL SKELETON:
+[
+  { "title": "The Pattern Interrupt Hook", "wordCount": 48, ... },
+  { "title": "The Problem Context", "wordCount": 125, ... },
+  { "title": "The Core Method", "wordCount": 220, ... },
+  { "title": "The Implementation Deep Dive", "wordCount": 240, ... },  // Adjusted from 270
+  { "title": "The Validation Layer", "wordCount": 110, ... },
+  { "title": "The Action CTA", "wordCount": 42, ... }
+]
+</example_analysis>
+
 <critical_notes>
 1. Pacing = LINGUISTIC rhythm (sentence length, breath patterns), NOT video editing speed
-2. wordCount = Calculated from actual transcript, NOT estimated or invented
-3. If no Flop content provided: Focus only on viral pattern extraction
-4. Structural skeleton sections: Use functional names that describe PURPOSE, not content
-5. Every recommendation must be actionable and generalizable
+2. wordCount = MEDIAN from cross-video analysis (Step 3C), NOT copied from one video
+3. MANDATORY: Complete Step 3 (Cross-Video Structure Analysis) BEFORE building skeleton
+4. Apply word count limits from Step 3D - reject outliers (e.g., 300-word hooks)
+5. If analyzing only 1 video: Still apply reasonable limits. Hook max 80w, CTA max 60w.
+6. If no Flop content provided: Focus only on viral pattern extraction
+7. Structural skeleton sections: Use functional names that describe PURPOSE, not content
+8. Every recommendation must be actionable and generalizable
 </critical_notes>`;
 
 // =============================================================================

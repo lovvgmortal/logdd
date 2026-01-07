@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { GlassCard, GlassCardContent, GlassCardHeader, GlassCardTitle, GlassCardDescription } from "@/components/ui/glass-card";
 import { Sparkles, Mail, Lock, Loader2, User, Eye, EyeOff, ArrowRight, Dna, Zap, Target } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/hooks/useLanguage";
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
@@ -19,6 +20,7 @@ export default function Auth() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const { user, signIn, signUp } = useAuth();
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   if (user) {
     return <Navigate to="/" replace />;
@@ -50,8 +52,8 @@ export default function Auth() {
 
     if (password.length < 6) {
       toast({
-        title: "Password too short",
-        description: "Password must be at least 6 characters",
+        title: t('auth.passwordTooShort'),
+        description: t('auth.passwordTooShortDesc'),
         variant: "destructive",
       });
       return;
@@ -78,8 +80,8 @@ export default function Auth() {
         });
       } else if (!isLogin) {
         toast({
-          title: "Account created!",
-          description: "You can now sign in with your credentials.",
+          title: t('auth.accountCreated'),
+          description: t('auth.accountCreatedDesc'),
         });
         setIsLogin(true);
         setPassword("");
@@ -90,10 +92,10 @@ export default function Auth() {
   };
 
   const features = [
-    { icon: Dna, text: "Extract viral DNA patterns", description: "Analyze top-performing videos" },
-    { icon: Sparkles, text: "AI-powered generation", description: "Create scripts in seconds" },
-    { icon: Target, text: "Audience personas", description: "Understand your viewers" },
-    { icon: Zap, text: "Rapid iteration", description: "Test and refine faster" },
+    { icon: Dna, text: t('auth.features.extractDna'), description: t('auth.features.extractDnaDesc') },
+    { icon: Sparkles, text: t('auth.features.aiPowered'), description: t('auth.features.aiPoweredDesc') },
+    { icon: Target, text: t('auth.features.personas'), description: t('auth.features.personasDesc') },
+    { icon: Zap, text: t('auth.features.rapidIteration'), description: t('auth.features.rapidIterationDesc') },
   ];
 
   return (
@@ -120,15 +122,14 @@ export default function Auth() {
         <div className="relative z-10 space-y-10">
           <div>
             <h1 className="text-5xl font-bold tracking-tight leading-tight">
-              Unlock the secrets
+              {t('auth.unlockSecrets')}
               <br />
               <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-                of viral content
+                {t('auth.ofViralContent')}
               </span>
             </h1>
             <p className="mt-6 text-lg text-muted-foreground max-w-md leading-relaxed">
-              Extract patterns from successful videos, generate scripts that resonate,
-              and build your audience faster than ever before.
+              {t('auth.heroDescription')}
             </p>
           </div>
 
@@ -151,7 +152,7 @@ export default function Auth() {
         <div className="relative z-10 flex items-center justify-between text-sm text-muted-foreground">
           <span>© 2026 logdd. All rights reserved.</span>
           <Link to="/pricing" className="text-primary hover:underline">
-            View Pricing
+            {t('auth.viewPricing')}
           </Link>
         </div>
       </div>
@@ -170,12 +171,12 @@ export default function Auth() {
           <GlassCard className="border-0 shadow-2xl">
             <GlassCardHeader className="text-center pb-2">
               <GlassCardTitle className="text-2xl">
-                {isLogin ? "Welcome back" : "Create your account"}
+                {isLogin ? t('auth.welcomeBack') : t('auth.createAccount')}
               </GlassCardTitle>
               <GlassCardDescription>
                 {isLogin
-                  ? "Enter your credentials to continue"
-                  : "Start creating viral content today"}
+                  ? t('auth.enterCredentials')
+                  : t('auth.startCreating')}
               </GlassCardDescription>
             </GlassCardHeader>
             <GlassCardContent className="pt-4 space-y-6">
@@ -209,7 +210,7 @@ export default function Auth() {
                         fill="#EA4335"
                       />
                     </svg>
-                    Continue with Google
+                    {t('auth.continueWithGoogle')}
                   </>
                 )}
               </Button>
@@ -220,20 +221,20 @@ export default function Auth() {
                   <span className="w-full border-t border-border" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-3 text-muted-foreground">or continue with email</span>
+                  <span className="bg-card px-3 text-muted-foreground">{t('auth.orContinueWith')}</span>
                 </div>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 {!isLogin && (
                   <div className="space-y-2">
-                    <Label htmlFor="name">Name</Label>
+                    <Label htmlFor="name">{t('auth.fullName')}</Label>
                     <div className="relative">
                       <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
                         id="name"
                         type="text"
-                        placeholder="Your name"
+                        placeholder={t('auth.namePlaceholder')}
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         className="pl-10 rounded-xl h-12"
@@ -243,13 +244,13 @@ export default function Auth() {
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">{t('auth.email')}</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
                       id="email"
                       type="email"
-                      placeholder="you@example.com"
+                      placeholder={t('auth.emailPlaceholder')}
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="pl-10 rounded-xl h-12"
@@ -259,13 +260,13 @@ export default function Auth() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password">{t('auth.password')}</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
                       id="password"
                       type={showPassword ? "text" : "password"}
-                      placeholder="••••••••"
+                      placeholder={t('auth.passwordPlaceholder')}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="pl-10 pr-10 rounded-xl h-12"
@@ -282,7 +283,7 @@ export default function Auth() {
                   </div>
                   {!isLogin && (
                     <p className="text-xs text-muted-foreground">
-                      Must be at least 6 characters
+                      {t('auth.passwordMinLength')}
                     </p>
                   )}
                 </div>
@@ -293,7 +294,7 @@ export default function Auth() {
                       type="button"
                       className="text-sm text-primary hover:underline"
                     >
-                      Forgot password?
+                      {t('auth.forgotPassword')}
                     </button>
                   </div>
                 )}
@@ -307,7 +308,7 @@ export default function Auth() {
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <>
-                      {isLogin ? "Sign In" : "Create Account"}
+                      {isLogin ? t('auth.signIn') : t('auth.createAccountAction')}
                       <ArrowRight className="h-4 w-4" />
                     </>
                   )}
@@ -316,7 +317,7 @@ export default function Auth() {
 
               <div className="text-center text-sm">
                 <span className="text-muted-foreground">
-                  {isLogin ? "Don't have an account? " : "Already have an account? "}
+                  {isLogin ? t('auth.noAccount') + " " : t('auth.hasAccount') + " "}
                 </span>
                 <button
                   type="button"
@@ -326,16 +327,16 @@ export default function Auth() {
                   }}
                   className="font-semibold text-primary hover:underline"
                 >
-                  {isLogin ? "Sign up" : "Sign in"}
+                  {isLogin ? t('auth.signUpAction') : t('auth.signInAction')}
                 </button>
               </div>
 
               {!isLogin && (
                 <p className="text-xs text-center text-muted-foreground">
-                  By creating an account, you agree to our{" "}
-                  <a href="#" className="text-primary hover:underline">Terms of Service</a>
-                  {" "}and{" "}
-                  <a href="#" className="text-primary hover:underline">Privacy Policy</a>
+                  {t('auth.termsAgreement')}{" "}
+                  <a href="#" className="text-primary hover:underline">{t('auth.termsOfService')}</a>
+                  {" "}{t('auth.and')}{" "}
+                  <a href="#" className="text-primary hover:underline">{t('auth.privacyPolicy')}</a>
                 </p>
               )}
             </GlassCardContent>

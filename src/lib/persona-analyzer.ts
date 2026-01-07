@@ -1,36 +1,73 @@
 import { callOpenRouter, extractJsonFromResponse, ChatMessage } from "./openrouter";
 
 export interface AnalyzedPersona {
+  // Basic Info
   name: string;
   ageRange: string;
   knowledgeLevel: string;
-  targetCountry?: string; // NEW: Target audience country/region
+  targetCountry?: string; // Target audience country/region
+
+  // Knowledge Profile (3-dimensional assessment)
   knowledgeProfile?: {
-    domainKnowledge: number;
-    engagementDepth: number;
-    skepticismLevel: number;
+    domainKnowledge: number; // 1-5: Complete beginner to Expert
+    engagementDepth: number; // 1-5: Casual viewer to Deep researcher
+    skepticismLevel: number; // 1-5: Highly trusting to Extremely skeptical
     reasoning: string;
   };
+
+  // Demographics
   demographics?: {
     ageEvidence: string;
     locationHints: string;
     occupationInference: string;
-    digitalFluency: string;
+    digitalFluency: 'low' | 'medium' | 'high';
   };
+
+  // Content Consumption Patterns
   contentConsumption?: {
-    attentionSpan: string;
-    engagementTriggers: string[];
-    learningStyle: string[];
+    attentionSpan: 'short' | 'medium' | 'long';
+    engagementTriggers: Array<'data-driven' | 'story-driven' | 'emotion-driven' | 'authority-driven'>;
+    learningStyle: Array<'visual-heavy' | 'step-by-step' | 'conceptual-first' | 'example-based'>;
     preferredContentLength: string;
   };
-  painPoints: string[] | Array<{ text: string; intensity: string; evidence: string }>;
+
+  // Psychology
+  painPoints: string[] | Array<{ text: string; intensity: 'high' | 'medium' | 'low'; evidence: string }>;
+  motivations?: string[] | Array<{ text: string; frequency: 'high' | 'medium' | 'low'; source: string }>;
+  objections?: string[] | Array<{ text: string; frequency: 'high' | 'medium' | 'low'; source: string }>;
+
+  // Trust Profile (MỚI - trigger tin tưởng)
+  // Cho phép custom trust types ngoài 4 loại cơ bản (data/story/authority/social-proof)
+  trustProfile?: {
+    primary: string; // VD: 'data', 'story', 'visual-proof', 'experiential', 'celebrity-endorsement'
+    secondary?: string;
+    reasoning: string; // Tại sao họ tin loại proof này
+  };
+
+  // Objection Timeline (MỚI - timeline phản đối theo word count)
+  objectionTimeline?: Array<{
+    atWordCount: number; // VD: 200, 450, 800
+    objection: string; // Objection cụ thể
+    counterTactic: string; // Cách phản bác
+  }>;
+
+  // Action Barriers (MỚI - rào cản hành động)
+  actionBarriers?: Array<'time-constraint' | 'skepticism' | 'cost-concern' | 'information-overload' | 'trust-issues' | 'technical-difficulty'>;
+
+  // Content Preferences & Tone
   preferredTone: string;
   vocabulary: string;
   platform: string;
   description: string;
   contentPreferences?: string[];
-  motivations?: string[] | Array<{ text: string; frequency: string; source: string }>;
-  objections?: string[] | Array<{ text: string; frequency: string; source: string }>;
+
+  // Source tracking
+  contentSources?: Array<{
+    id?: string;
+    script?: string;
+    youtubeUrl?: string;
+    comments?: string;
+  }>;
 }
 
 const ANALYZE_PERSONA_PROMPT = `You are an expert audience researcher and psychologist. Your task is to reverse-engineer a target audience persona from the content they consume and the feedback they provide.
@@ -122,6 +159,50 @@ Look for behavioral patterns:
    - Frequency: high (major barrier), medium (common concern), low (minor hesitation)
    - Source: "Negative comments" or "Skeptical questions pattern"
 
+6. TRUST PROFILE ANALYSIS (MỚI):
+   Determine what type of proof they trust most. Choose from common types OR create a custom type:
+
+   Common types:
+   - data: Responds to statistics, studies, numbers (e.g., "87% success rate")
+   - story: Engages with personal narratives, case studies, testimonials
+   - authority: Values expert credentials, citations, institutional backing
+   - social-proof: Influenced by community validation, reviews, popularity
+
+   Custom types (if audience doesn't fit above):
+   - visual-proof: Needs to see it to believe it (before/after images, demos)
+   - experiential: Must try it themselves, values hands-on experience
+   - celebrity-endorsement: Trusts famous figures, influencer recommendations
+   - scientific-method: Needs peer-reviewed research, controlled experiments
+   - community-driven: Trusts grassroots movements, collective wisdom
+   - Or create your own based on comment analysis
+
+   Evidence:
+   - What comments get most positive engagement?
+   - What type of content do they ask for more of?
+   - Do they challenge claims that lack specific proof types?
+
+   Return as string (e.g., "data", "visual-proof", "celebrity-endorsement")
+
+7. OBJECTION TIMELINE (MỚI):
+   Map objections to word count milestones where they likely arise:
+   - Early (0-200 words): Skepticism about credibility, "Who is this person?"
+   - Middle (200-500 words): Doubt about applicability, "Will this work for me?"
+   - Late (500+ words): Hesitation about action, "Is this worth my time/money?"
+
+   For each objection:
+   - atWordCount: Where it emerges (based on content flow)
+   - objection: Specific skeptical thought
+   - counterTactic: How to pre-empt or address it
+
+8. ACTION BARRIERS (MỚI):
+   Why they don't take action after consuming content:
+   - time-constraint: "I don't have time for this"
+   - skepticism: "I don't believe this will work"
+   - cost-concern: "Too expensive / not worth it"
+   - information-overload: "Too complex, don't know where to start"
+   - trust-issues: "Can I trust this source?"
+   - technical-difficulty: "Sounds too hard for my skill level"
+
 </analysis_dimensions>
 
 <output_schema>
@@ -208,7 +289,28 @@ Return ONLY valid JSON (no markdown, no explanations):
       "frequency": "medium",
       "source": "Questions about ROI and realistic timelines"
     }
-  ]
+  ],
+
+  "trustProfile": {
+    "primary": "data|story|authority|social-proof",
+    "secondary": "data|story|authority|social-proof (optional)",
+    "reasoning": "Why they trust this type of proof (evidence from comments/behavior)"
+  },
+
+  "objectionTimeline": [
+    {
+      "atWordCount": 200,
+      "objection": "This sounds too good to be true",
+      "counterTactic": "Show concrete data + real case study"
+    },
+    {
+      "atWordCount": 450,
+      "objection": "Will this work for someone like me?",
+      "counterTactic": "Address specific persona pain point with relatable example"
+    }
+  ],
+
+  "actionBarriers": ["time-constraint", "skepticism", "cost-concern", "information-overload", "trust-issues", "technical-difficulty"]
 }
 </output_schema>
 

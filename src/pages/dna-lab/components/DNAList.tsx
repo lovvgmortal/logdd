@@ -1,6 +1,7 @@
 import { Search, Dna, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { DNACard } from "./DNACard";
+import { useLanguage } from "@/hooks/useLanguage";
 import type { DNA } from "../types";
 
 interface DNAListProps {
@@ -22,6 +23,7 @@ export function DNAList({
     onExport,
     onDelete,
 }: DNAListProps) {
+    const { t } = useLanguage();
     const filteredDnas = dnas.filter(dna =>
         dna.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         dna.niche?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -33,7 +35,7 @@ export function DNAList({
             <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                    placeholder="Search DNA patterns..."
+                    placeholder={t('dnaLab.searchPlaceholder')}
                     value={searchQuery}
                     onChange={(e) => onSearchChange(e.target.value)}
                     className="pl-10 rounded-xl bg-card/50"
@@ -48,7 +50,7 @@ export function DNAList({
             ) : filteredDnas.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                     <Dna className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No DNA patterns found. Extract your first one!</p>
+                    <p>{t('dnaLab.noDna')}</p>
                 </div>
             ) : (
                 <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">

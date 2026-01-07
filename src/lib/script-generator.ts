@@ -1,5 +1,6 @@
 import { callOpenRouter, extractJsonFromResponse, ChatMessage } from "./openrouter";
 import { DNA_PERSONA_CONFLICT_MATRIX, detectConflicts, generateResolutionStrategy } from "@/prompts/conflict-resolution";
+import { adaptDNAToPersona, type AdaptationResult } from "./dna-persona-adapter";
 
 export interface GenerateScriptParams {
   topic: string;
@@ -71,6 +72,22 @@ export const generateOutline = async (
     throw new Error("Topic là bắt buộc");
   }
 
+  // ============================================================================
+  // ADAPTER INTEGRATION: Adapt DNA to Persona if both exist
+  // ============================================================================
+  let adaptation: AdaptationResult | null = null;
+
+  if (params.dna && params.persona) {
+    adaptation = adaptDNAToPersona(params.dna, params.persona);
+
+    // Log adaptation results for debugging
+    console.log('🔗 DNA-Persona Adaptation:', {
+      matchScore: adaptation.matchScore,
+      warnings: adaptation.warnings,
+      toneAdjustments: adaptation.toneAdjustments
+    });
+  }
+
   let systemPrompt = GENERATE_OUTLINE_PROMPT;
 
   // Add scaling and structure instructions
@@ -123,6 +140,21 @@ export const generateOutline = async (
   // Add conflict resolution matrix if both DNA and Persona exist
   systemPrompt += buildConflictResolutionContext(params.dna, params.persona);
 
+  // ============================================================================
+  // ADAPTER INTEGRATION: Add match score context
+  // ============================================================================
+  if (adaptation) {
+    systemPrompt += `\n\n📊 DNA-PERSONA MATCH SCORE: ${adaptation.matchScore}/100`;
+
+    if (adaptation.matchScore >= 80) {
+      systemPrompt += ` (Excellent match - DNA and Persona are highly compatible)`;
+    } else if (adaptation.matchScore >= 60) {
+      systemPrompt += ` (Good match - minor adjustments needed)`;
+    } else {
+      systemPrompt += ` (⚠️ Low compatibility - significant calibration required)`;
+    }
+  }
+
   // Add audience context with Persona priority
   if (params.persona) {
     // Persona takes priority
@@ -132,8 +164,28 @@ export const generateOutline = async (
 - Knowledge Level: ${params.persona.knowledge_level || 'intermediate'}
 - Pain Points: ${params.persona.pain_points?.join(', ') || 'Not specified'}
 - Preferred Tone: ${params.persona.preferred_tone || 'casual'}
-- Vocabulary: ${params.persona.vocabulary || 'conversational'}
-- Objections to Address: ${params.persona.objections?.join(', ') || 'Not specified'}`;
+- Vocabulary: ${params.persona.vocabulary || 'conversational'}`;
+
+    // Add new enhanced persona fields
+    if (params.persona.trust_profile) {
+      systemPrompt += `\n- Trust Profile: Primary = ${params.persona.trust_profile.primary}${params.persona.trust_profile.secondary ? `, Secondary = ${params.persona.trust_profile.secondary}` : ''} (${params.persona.trust_profile.reasoning})`;
+    }
+
+    if (params.persona.action_barriers?.length > 0) {
+      systemPrompt += `\n- Action Barriers: ${params.persona.action_barriers.join(', ')}`;
+    }
+
+    if (params.persona.content_consumption) {
+      systemPrompt += `\n- Attention Span: ${params.persona.content_consumption.attentionSpan || 'medium'}`;
+      if (params.persona.content_consumption.preferredFormats) {
+        systemPrompt += `\n- Preferred Formats: ${params.persona.content_consumption.preferredFormats.join(', ')}`;
+      }
+    }
+
+    // Legacy objections field (backward compatibility)
+    if (params.persona.objections?.length > 0) {
+      systemPrompt += `\n- General Objections: ${params.persona.objections.join(', ')}`;
+    }
   } else if (params.dna?.analysis_data?.audiencePsychology) {
     // Fallback to DNA audience psychology
     systemPrompt += `\n\nTARGET AUDIENCE (Inferred from source DNA):
@@ -177,11 +229,16 @@ ${params.dna.analysis_data.audiencePsychology}`;
     systemPrompt += `\n- Tone: ${params.dna.tone || 'engaging'}`;
     systemPrompt += `\n- Retention Tactics: ${params.dna.retention_tactics?.join(', ') || 'Not specified'}`;
 
+    // ============================================================================
+    // ADAPTER INTEGRATION: Use adapted word counts if available
+    // ============================================================================
     if (detailedStructure && detailedStructure.length > 0) {
       systemPrompt += `\n\nREQUIRED STRUCTURE (Follow this EXACTLY unless innovation is allowed):
-${detailedStructure.map((s: any, i: number) =>
-        `${i + 1}. ${s.title} (Target: ~${s.wordCount} words) ${s.contentFocus ? `[Focus: ${s.contentFocus}]` : ''} ${s.pacing ? `[Pacing: ${s.pacing}]` : ''}`
-      ).join('\n')}`;
+${detailedStructure.map((s: any, i: number) => {
+        // Use adapted word count if available, otherwise use original
+        const wordCount = adaptation?.adaptedWordCounts[s.title] || s.wordCount;
+        return `${i + 1}. ${s.title} (Target: ~${wordCount} words) ${s.contentFocus ? `[Focus: ${s.contentFocus}]` : ''} ${s.pacing ? `[Pacing: ${s.pacing}]` : ''}`;
+      }).join('\n')}`;
     } else if (basicStructure && basicStructure.length > 0) {
       systemPrompt += `\n\nREQUIRED STRUCTURE:
 ${basicStructure.join(' → ')}`;
@@ -191,6 +248,89 @@ ${basicStructure.join(' → ')}`;
       systemPrompt += `\n\nINNOVATION ALLOWED: You may deviate from the DNA structure by 15-25% to add novelty or better fit the topic. You can merge sections or add new relevant ones, but keep the core "DNA" feeling.`;
     } else {
       systemPrompt += `\n\nSTRICT ADHERENCE REQUIRED: You MUST follow the provided DNA structure/sections EXACTLY. Do not add or remove sections. Match the outline to the DNA steps 1-to-1.`;
+    }
+
+    // ============================================================================
+    // ADAPTER INTEGRATION: Add proof strategy if available
+    // ============================================================================
+    if (adaptation?.proofStrategy) {
+      systemPrompt += `\n\n🎯 PROOF STRATEGY (Optimized for target audience trust profile):
+- Primary Proof Type: ${adaptation.proofStrategy.primary}
+- Proof Sequence: ${adaptation.proofStrategy.sequence.join(' → ')}
+- Section-specific Proof Placements:`;
+
+      Object.entries(adaptation.proofStrategy.placements).forEach(([section, proofType]) => {
+        systemPrompt += `\n  * "${section}": Use ${proofType}`;
+      });
+
+      systemPrompt += `\n\nINSTRUCTION: Place the specified proof types in their designated sections to maximize persuasiveness for this specific audience.`;
+    }
+
+    // ============================================================================
+    // ADAPTER INTEGRATION: Add objection placement instructions
+    // ============================================================================
+    if (adaptation?.objectionPlacements && adaptation.objectionPlacements.length > 0) {
+      systemPrompt += `\n\n🛡️ OBJECTION HANDLING TIMELINE (Address these at specific word count milestones):`;
+
+      adaptation.objectionPlacements.forEach((obj, idx) => {
+        systemPrompt += `\n${idx + 1}. At ~${obj.atWordCount} words (in "${obj.inSection}"):
+   Objection: "${obj.objection}"
+   Counter with: ${obj.counterTactic}`;
+      });
+
+      systemPrompt += `\n\nINSTRUCTION: Proactively address these objections at the specified word count milestones to prevent drop-offs.`;
+    }
+
+    // ============================================================================
+    // ADAPTER INTEGRATION: Add tone adjustments if needed
+    // ============================================================================
+    if (adaptation?.toneAdjustments && adaptation.toneAdjustments.length > 0) {
+      systemPrompt += `\n\n🎨 TONE CALIBRATION (Persona-specific adjustments):`;
+      adaptation.toneAdjustments.forEach((adjustment) => {
+        systemPrompt += `\n- ${adjustment}`;
+      });
+    }
+
+    // ============================================================================
+    // ADAPTER INTEGRATION: Add compatibility warnings
+    // ============================================================================
+    if (adaptation?.warnings && adaptation.warnings.length > 0) {
+      systemPrompt += `\n\n⚠️ DNA-PERSONA COMPATIBILITY WARNINGS:`;
+      adaptation.warnings.forEach((warning) => {
+        systemPrompt += `\n- ${warning}`;
+      });
+      systemPrompt += `\n\nINSTRUCTION: Be mindful of these compatibility issues and adjust your approach accordingly.`;
+    }
+
+    // Retention Hooks (NEW - if available in DNA)
+    if (params.dna.analysis_data?.retentionHooks && params.dna.analysis_data.retentionHooks.length > 0) {
+      systemPrompt += `\n\n🎣 RETENTION HOOKS (Re-engagement at word count milestones):`;
+      params.dna.analysis_data.retentionHooks.forEach((hook: any) => {
+        systemPrompt += `\n- At ~${hook.atWordCount} words: ${hook.technique} (e.g., "${hook.example}")`;
+      });
+      systemPrompt += `\n\nINSTRUCTION: Use these retention hooks at the specified word counts to prevent audience drop-off.`;
+    }
+
+    // Persuasion Flow (NEW - if available in DNA)
+    if (params.dna.analysis_data?.persuasionFlow) {
+      const flow = params.dna.analysis_data.persuasionFlow;
+      systemPrompt += `\n\n🧠 PERSUASION FLOW:
+- Framework: ${flow.framework}
+- Logical Progression: ${flow.logicalProgression?.join(' → ') || 'Not specified'}`;
+
+      if (flow.objectionHandling?.mainObjection) {
+        systemPrompt += `\n- Main Objection: "${flow.objectionHandling.mainObjection}"
+  Counter Tactic: ${flow.objectionHandling.counterTactic}
+  Placement: ${flow.objectionHandling.placement}`;
+      }
+    }
+
+    // Transitions (NEW - if available in DNA)
+    if (params.dna.analysis_data?.transitions && params.dna.analysis_data.transitions.length > 0) {
+      systemPrompt += `\n\n🔗 TRANSITION FORMULAS (Use these between sections):`;
+      params.dna.analysis_data.transitions.forEach((t: any, idx: number) => {
+        systemPrompt += `\n${idx + 1}. ${t.from} → ${t.to}: ${t.formula}${t.example ? ` (e.g., "${t.example}")` : ''}`;
+      });
     }
 
     // Hook Examples with anti-copy instruction

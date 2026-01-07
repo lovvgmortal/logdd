@@ -25,11 +25,13 @@ import type { WriterMode, WriterStep, OutlineVersion, ReferenceItem } from "./ty
 import { createEmptyReference } from "./types";
 import { useSubscription } from "@/hooks/useSubscription";
 import { FeatureGate } from "@/components/subscription";
+import { useLanguage } from "@/hooks/useLanguage";
 
 export default function Writer() {
   const navigate = useNavigate();
   const { id: scriptId } = useParams();
   const { toast } = useToast();
+  const { t } = useLanguage();
   const { personas } = usePersonas();
   const { dnas } = useDnas();
   const { scripts, generateOutline, generateScriptFromOutline, generateScriptSectionBySection, scoreScript, createScript, updateScript, suggestUniqueAngle, rewriteSection, generateSEO } = useScripts();
@@ -359,7 +361,7 @@ export default function Writer() {
         // Add to persistent DB history as well (so it's safe)
         const currentHistoryEntry: VersionEntry = {
           id: versionId,
-          name: `Draft ${updatedOutlineHistory.length + 1}`,
+          name: `${t('common.draft')} ${updatedOutlineHistory.length + 1}`,
           content: JSON.stringify(result),
           timestamp: new Date().toISOString(),
           wordCount: countWords(JSON.stringify(result)) // Approximate
@@ -452,7 +454,7 @@ export default function Writer() {
           ));
         }
 
-        const draftName = `Draft ${updatedScriptHistory.filter(s =>
+        const draftName = `${t('common.draft')} ${updatedScriptHistory.filter(s =>
           !currentOutlineVersionId || s.outlineVersionId === currentOutlineVersionId
         ).length + 1}`;
 
@@ -730,11 +732,11 @@ export default function Writer() {
   const [headerNameValue, setHeaderNameValue] = useState("");
 
   const currentOutlineEntry = dbOutlineHistory.find(v => v.id === currentOutlineVersionId);
-  const currentOutlineName = currentOutlineEntry?.name || (dbOutlineHistory.length > 0 ? `Draft ${dbOutlineHistory.length}` : "New Draft");
+  const currentOutlineName = currentOutlineEntry?.name || (dbOutlineHistory.length > 0 ? `${t('common.draft')} ${dbOutlineHistory.length}` : `${t('common.draft')} 1`);
 
   const currentScriptEntry = dbScriptHistory.find(v => v.id === currentScriptVersionId);
   const currentScriptName = currentScriptEntry?.name || (dbScriptHistory.filter(s => !currentOutlineVersionId || s.outlineVersionId === currentOutlineVersionId).length > 0
-    ? `Draft ${dbScriptHistory.filter(s => !currentOutlineVersionId || s.outlineVersionId === currentOutlineVersionId).length}`
+    ? `${t('common.draft')} ${dbScriptHistory.filter(s => !currentOutlineVersionId || s.outlineVersionId === currentOutlineVersionId).length}`
     : "New Script");
 
   const handleHeaderNameUpdate = async () => {
@@ -800,8 +802,8 @@ export default function Writer() {
     return (
       <div className="p-4 md:p-6 lg:p-8 space-y-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">AI Writer</h1>
-          <p className="text-muted-foreground">Generate unique, viral-ready scripts</p>
+          <h1 className="text-2xl font-bold tracking-tight">{t('writer.title')}</h1>
+          <p className="text-muted-foreground">{t('writer.subtitle')}</p>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 max-w-3xl">
@@ -811,12 +813,12 @@ export default function Writer() {
                 <Lightbulb className="h-12 w-12 text-primary" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-xl font-semibold">New Idea</h3>
+                <h3 className="text-xl font-semibold">{t('writer.mode.newIdea')}</h3>
                 <p className="text-muted-foreground">
-                  Start fresh with your own topic and create an original script
+                  {t('writer.mode.newIdeaDesc')}
                 </p>
               </div>
-              <Badge className="bg-primary/10 text-primary">Most Popular</Badge>
+              <Badge className="bg-primary/10 text-primary">{t('writer.mode.popular')}</Badge>
             </GlassCardContent>
           </GlassCard>
 
@@ -826,9 +828,9 @@ export default function Writer() {
                 <RefreshCw className="h-12 w-12 text-accent-foreground" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-xl font-semibold">Rewrite</h3>
+                <h3 className="text-xl font-semibold">{t('writer.mode.rewrite')}</h3>
                 <p className="text-muted-foreground">
-                  Transform a competitor's script using your unique DNA pattern
+                  {t('writer.mode.rewriteDesc')}
                 </p>
               </div>
             </GlassCardContent>
@@ -845,7 +847,7 @@ export default function Writer() {
       <div className="flex flex-col gap-4">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" onClick={handleBack}>
-            ← Back
+            ← {t('common.back')}
           </Button>
           <div className="flex-1">
             {/* Project Title - Editable */}
@@ -887,9 +889,9 @@ export default function Writer() {
               </div>
             )}
             <p className="text-muted-foreground">
-              {currentStep === "input" && "Step 1: Enter your inputs"}
-              {currentStep === "outline" && "Step 2: Review and edit outline"}
-              {currentStep === "script" && "Step 3: Your generated script"}
+              {currentStep === "input" && t('writer.steps.step1Desc')}
+              {currentStep === "outline" && t('writer.steps.step2Desc')}
+              {currentStep === "script" && t('writer.steps.step3Desc')}
             </p>
           </div>
           {(currentStep === "script" || currentStep === "outline") && (
@@ -897,7 +899,7 @@ export default function Writer() {
               {/* Save Button */}
               <Button onClick={handleSaveProject} size="sm" className="gap-2 shadow-sm h-8 rounded-full">
                 <Save className="h-4 w-4" />
-                {currentStep === "outline" ? "Save" : "Save"}
+                {t('common.save')}
               </Button>
 
               {/* Central Name Display */}
@@ -949,7 +951,7 @@ export default function Writer() {
                   className="h-8 gap-2"
                 >
                   <Edit2 className="h-3 w-3" />
-                  {editingOutline ? "Done" : "Edit"}
+                  {editingOutline ? t('common.done') : t('common.edit')}
                 </Button>
               )}
             </div>
@@ -966,7 +968,7 @@ export default function Writer() {
               }`}
           >
             <span className="w-5 h-5 rounded-full bg-current/20 flex items-center justify-center text-xs">1</span>
-            Input
+            {t('writer.steps.input')}
           </button>
           <ChevronRight className="h-4 w-4 text-muted-foreground" />
           <button
@@ -980,7 +982,7 @@ export default function Writer() {
               }`}
           >
             <span className="w-5 h-5 rounded-full bg-current/20 flex items-center justify-center text-xs">2</span>
-            Outline
+            {t('writer.steps.outline')}
           </button>
           <ChevronRight className="h-4 w-4 text-muted-foreground" />
           <button
@@ -994,7 +996,7 @@ export default function Writer() {
               }`}
           >
             <span className="w-5 h-5 rounded-full bg-current/20 flex items-center justify-center text-xs">3</span>
-            Script
+            {t('writer.steps.script')}
           </button>
         </div>
       </div>
@@ -1008,7 +1010,7 @@ export default function Writer() {
               <GlassCardHeader>
                 <GlassCardTitle className="flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-primary" />
-                  AI Model (Outline)
+                  {t('writer.aiModelOutline')}
                 </GlassCardTitle>
               </GlassCardHeader>
               <GlassCardContent>
@@ -1019,23 +1021,23 @@ export default function Writer() {
             {/* DNA & Persona Selection */}
             <GlassCard>
               <GlassCardHeader>
-                <GlassCardTitle>Configure Generation</GlassCardTitle>
+                <GlassCardTitle>{t('writer.configureGen')}</GlassCardTitle>
                 <GlassCardDescription>
-                  Select DNA pattern and/or audience persona to guide the script
+                  {t('writer.configureGenDesc')}
                 </GlassCardDescription>
               </GlassCardHeader>
               <GlassCardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     <Dna className="h-4 w-4 text-primary" />
-                    DNA Pattern
+                    {t('writer.dnaPattern')}
                   </Label>
                   <Select value={selectedDna} onValueChange={setSelectedDna}>
                     <SelectTrigger className="rounded-xl">
-                      <SelectValue placeholder="Select DNA (optional)..." />
+                      <SelectValue placeholder={t('writer.selectDnaPlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">No DNA</SelectItem>
+                      <SelectItem value="none">{t('writer.noDna')}</SelectItem>
                       {dnas.map(dna => <SelectItem key={dna.id} value={dna.id}>{dna.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
@@ -1044,14 +1046,14 @@ export default function Writer() {
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     <Users className="h-4 w-4 text-primary" />
-                    Audience Persona
+                    {t('writer.audiencePersona')}
                   </Label>
                   <Select value={selectedPersona} onValueChange={setSelectedPersona}>
                     <SelectTrigger className="rounded-xl">
-                      <SelectValue placeholder="Select persona (optional)..." />
+                      <SelectValue placeholder={t('writer.selectPersonaPlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">No Persona</SelectItem>
+                      <SelectItem value="none">{t('writer.noPersona')}</SelectItem>
                       {personas.map(persona => <SelectItem key={persona.id} value={persona.id}>{persona.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
@@ -1060,11 +1062,11 @@ export default function Writer() {
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     <Globe className="h-4 w-4 text-primary" />
-                    Language
+                    {t('common.language')}
                   </Label>
                   <Select value={language} onValueChange={setLanguage}>
                     <SelectTrigger className="rounded-xl">
-                      <SelectValue placeholder="Select language..." />
+                      <SelectValue placeholder={t('common.languagePlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="en">English</SelectItem>
@@ -1080,11 +1082,11 @@ export default function Writer() {
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     <Globe className="h-4 w-4 text-primary" />
-                    Target Country/Region
+                    {t('writer.targetCountry')}
                   </Label>
                   <Select value={country} onValueChange={setCountry}>
                     <SelectTrigger className="rounded-xl">
-                      <SelectValue placeholder="Select country..." />
+                      <SelectValue placeholder={t('writer.selectCountryPlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="US">🇺🇸 United States</SelectItem>
@@ -1109,22 +1111,22 @@ export default function Writer() {
                       <SelectItem value="NL">🇳🇱 Netherlands</SelectItem>
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground">Cultural adaptation for local audience</p>
+                  <p className="text-xs text-muted-foreground">{t('writer.cultureAdapt')}</p>
                 </div>
 
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     <FileText className="h-4 w-4 text-primary" />
-                    Target Word Count
+                    {t('writer.targetWordCount')}
                   </Label>
                   <Input
                     type="number"
                     value={targetWordCount}
                     onChange={(e) => setTargetWordCount(parseInt(e.target.value) || 0)}
                     className="rounded-xl"
-                    placeholder="e.g. 1000"
+                    placeholder={t('writer.wordCountPlaceholder')}
                   />
-                  <p className="text-xs text-muted-foreground">Approximate length for scaling sections</p>
+                  <p className="text-xs text-muted-foreground">{t('writer.wordCountDesc')}</p>
                 </div>
 
                 <FeatureGate feature="structure_innovation">
@@ -1140,10 +1142,10 @@ export default function Writer() {
                         htmlFor="innovation"
                         className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                       >
-                        Allow Structure Innovation
+                        {t('writer.allowInnovation')}
                       </Label>
                       <p className="text-xs text-muted-foreground leading-snug">
-                        Allow AI to vary the structure by 15-25% for novelty while keeping core DNA elements.
+                        {t('writer.allowInnovationDesc')}
                       </p>
                     </div>
                   </div>
@@ -1156,10 +1158,10 @@ export default function Writer() {
             <GlassCard>
               <GlassCardHeader>
                 <GlassCardTitle>
-                  {writerMode === "new-idea" ? "Your Idea" : "Competitor Script"}
+                  {writerMode === "new-idea" ? t('writer.yourIdea') : t('writer.competitorScript')}
                 </GlassCardTitle>
                 <GlassCardDescription>
-                  {writerMode === "new-idea" ? "What topic do you want to create content about?" : "Paste the competitor's script to rewrite"}
+                  {writerMode === "new-idea" ? t('writer.ideaDesc') : t('writer.competitorDesc')}
                 </GlassCardDescription>
               </GlassCardHeader>
               <GlassCardContent className="space-y-4">
@@ -1167,31 +1169,31 @@ export default function Writer() {
                   <>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <Label>Topic *</Label>
+                        <Label>{t('writer.topicLabel')} *</Label>
                         <WordCount text={topic} />
                       </div>
                       <Input
                         value={topic}
                         onChange={e => setTopic(e.target.value)}
-                        placeholder="e.g., How to build a morning routine..."
+                        placeholder={t('writer.topicPlaceholder')}
                         className="rounded-xl"
                       />
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <Label>Key Points (Optional)</Label>
+                        <Label>{t('writer.keyPointsLabel')}</Label>
                         <WordCount text={keyPoints} />
                       </div>
                       <Textarea
                         value={keyPoints}
                         onChange={e => setKeyPoints(e.target.value)}
-                        placeholder="Main points you want to cover..."
+                        placeholder={t('writer.keyPointsPlaceholder')}
                         className="rounded-xl resize-none min-h-[100px]"
                       />
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <Label>Your Unique Angle</Label>
+                        <Label>{t('writer.uniqueAngle')}</Label>
                         <div className="flex items-center gap-2">
                           <FeatureGate feature="ai_suggest_angle" hideCompletely>
                             <Button
@@ -1199,7 +1201,7 @@ export default function Writer() {
                               size="sm"
                               onClick={async () => {
                                 if (!topic) {
-                                  toast({ title: "Enter a topic first", variant: "destructive" });
+                                  toast({ title: t('writer.enterTopicFirst'), variant: "destructive" });
                                   return;
                                 }
                                 setSuggestingAngle(true);
@@ -1216,7 +1218,7 @@ export default function Writer() {
                               className="h-7 text-xs gap-1"
                             >
                               {suggestingAngle ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                              AI Suggest
+                              {t('writer.aiSuggest')}
                             </Button>
                           </FeatureGate>
                           <WordCount text={uniqueAngle} />
@@ -1225,7 +1227,7 @@ export default function Writer() {
                       <Textarea
                         value={uniqueAngle}
                         onChange={e => setUniqueAngle(e.target.value)}
-                        placeholder="What makes your perspective different? Click 'AI Suggest' for ideas..."
+                        placeholder={t('writer.uniqueAnglePlaceholder')}
                         className="rounded-xl resize-none min-h-[80px]"
                       />
                     </div>
@@ -1234,19 +1236,19 @@ export default function Writer() {
                   <>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <Label>Competitor Script *</Label>
+                        <Label>{t('writer.competitorScriptLabel')} *</Label>
                         <WordCount text={competitorScript} />
                       </div>
                       <Textarea
                         value={competitorScript}
                         onChange={e => setCompetitorScript(e.target.value)}
-                        placeholder="Paste the competitor's script here..."
+                        placeholder={t('writer.competitorScriptPlaceholder')}
                         className="rounded-xl resize-none min-h-[200px]"
                       />
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <Label>Your Unique Angle (Optional)</Label>
+                        <Label>{t('writer.uniqueAngleOptional')}</Label>
                         <div className="flex items-center gap-2">
                           <FeatureGate feature="ai_suggest_angle" hideCompletely>
                             <Button
@@ -1254,7 +1256,7 @@ export default function Writer() {
                               size="sm"
                               onClick={async () => {
                                 if (!competitorScript) {
-                                  toast({ title: "Paste competitor script first", variant: "destructive" });
+                                  toast({ title: t('writer.pasteCompetitorFirst'), variant: "destructive" });
                                   return;
                                 }
                                 setSuggestingAngle(true);
@@ -1273,7 +1275,7 @@ export default function Writer() {
                               className="h-7 text-xs gap-1"
                             >
                               {suggestingAngle ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                              AI Suggest
+                              {t('writer.aiSuggest')}
                             </Button>
                           </FeatureGate>
                           <WordCount text={uniqueAngle} />
@@ -1282,7 +1284,7 @@ export default function Writer() {
                       <Textarea
                         value={uniqueAngle}
                         onChange={e => setUniqueAngle(e.target.value)}
-                        placeholder="What makes your version different? Click 'AI Suggest' for ideas..."
+                        placeholder={t('writer.uniqueAnglePlaceholder')}
                         className="rounded-xl resize-none min-h-[80px]"
                       />
                     </div>
@@ -1303,8 +1305,8 @@ export default function Writer() {
                           <TrendingUp className="h-4 w-4 text-green-600" />
                         </div>
                         <div className="text-left">
-                          <p className="font-medium text-green-600">Viral References</p>
-                          <p className="text-xs text-muted-foreground">Add successful content examples to learn from</p>
+                          <p className="font-medium text-green-600">{t('writer.viralReferences')}</p>
+                          <p className="text-xs text-muted-foreground">{t('writer.viralReferencesSubtitle')}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -1335,16 +1337,16 @@ export default function Writer() {
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
                             <div className="space-y-1">
-                              <Label className="text-xs text-muted-foreground">Title</Label>
+                              <Label className="text-xs text-muted-foreground">{t('writer.refTitle')}</Label>
                               <Input
-                                placeholder="e.g., How I built a SaaS in 2 days"
+                                placeholder={t('writer.refTitlePlaceholder')}
                                 value={ref.title}
                                 onChange={(e) => updateViralReference(ref.id, "title", e.target.value)}
                                 className="h-8 text-sm"
                               />
                             </div>
                             <div className="space-y-1">
-                              <Label className="text-xs text-muted-foreground">YouTube URL</Label>
+                              <Label className="text-xs text-muted-foreground">{t('writer.refUrl')}</Label>
                               <Input
                                 placeholder="https://youtube.com/"
                                 value={ref.url}
@@ -1360,15 +1362,15 @@ export default function Writer() {
                           >
                             <TabsList className="h-8 bg-background/50">
                               <TabsTrigger value="transcript" className="text-xs h-6 gap-1">
-                                <FileText className="h-3 w-3" /> Script / Transcript
+                                <FileText className="h-3 w-3" /> {t('writer.refScript')}
                               </TabsTrigger>
                               <TabsTrigger value="comments" className="text-xs h-6 gap-1">
-                                <MessageSquare className="h-3 w-3" /> Comments / Feedback
+                                <MessageSquare className="h-3 w-3" /> {t('writer.refComments')}
                               </TabsTrigger>
                             </TabsList>
                             <TabsContent value="transcript" className="mt-2">
                               <Textarea
-                                placeholder="Paste content here..."
+                                placeholder={t('writer.refScriptPlaceholder')}
                                 value={ref.transcript}
                                 onChange={(e) => updateViralReference(ref.id, "transcript", e.target.value)}
                                 className="min-h-[80px] text-sm resize-none"
@@ -1376,7 +1378,7 @@ export default function Writer() {
                             </TabsContent>
                             <TabsContent value="comments" className="mt-2">
                               <Textarea
-                                placeholder="Paste comments or feedback here..."
+                                placeholder={t('writer.refCommentsPlaceholder')}
                                 value={ref.comments}
                                 onChange={(e) => updateViralReference(ref.id, "comments", e.target.value)}
                                 className="min-h-[80px] text-sm resize-none"
@@ -1385,9 +1387,9 @@ export default function Writer() {
                           </Tabs>
 
                           <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">Description / Notes</Label>
+                            <Label className="text-xs text-muted-foreground">{t('writer.refNotes')}</Label>
                             <Textarea
-                              placeholder="e.g., A quick breakdown of the tech stack..."
+                              placeholder={t('writer.refNotesPlaceholder')}
                               value={ref.notes}
                               onChange={(e) => updateViralReference(ref.id, "notes", e.target.value)}
                               className="min-h-[60px] text-sm resize-none"
@@ -1402,7 +1404,7 @@ export default function Writer() {
                         className="w-full gap-2 border-dashed border-green-500/50 text-green-600 hover:bg-green-500/5"
                       >
                         <Plus className="h-4 w-4" />
-                        Add Viral Reference
+                        {t('writer.addViralRef')}
                       </Button>
                     </div>
                   </CollapsibleContent>
@@ -1419,8 +1421,8 @@ export default function Writer() {
                           <TrendingDown className="h-4 w-4 text-red-500" />
                         </div>
                         <div className="text-left">
-                          <p className="font-medium text-red-500">Flop References</p>
-                          <p className="text-xs text-muted-foreground">Add examples of what to avoid</p>
+                          <p className="font-medium text-red-500">{t('writer.flopReferences')}</p>
+                          <p className="text-xs text-muted-foreground">{t('writer.flopReferencesSubtitle')}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -1518,7 +1520,7 @@ export default function Writer() {
                         className="w-full gap-2 border-dashed border-red-500/50 text-red-500 hover:bg-red-500/5"
                       >
                         <Plus className="h-4 w-4" />
-                        Add Flop Reference
+                        {t('writer.addFlopRef')}
                       </Button>
                     </div>
                   </CollapsibleContent>
@@ -1555,7 +1557,7 @@ export default function Writer() {
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <Clock className="h-5 w-5 text-muted-foreground" />
-                <span className="text-muted-foreground">Est. Words: {outline.totalWordCount}</span>
+                <span className="text-muted-foreground">{t('writer.estWords')}: {outline.totalWordCount}</span>
               </div>
 
               {/* Outline History Button - Local session */}
@@ -1570,7 +1572,7 @@ export default function Writer() {
                   const count = dbScriptHistory.filter(s => s.outlineVersionId === entry.id).length;
                   return count > 0 ? (
                     <Badge variant="secondary" className="text-[10px] h-5 px-1 bg-blue-100 text-blue-700 hover:bg-blue-200 border-none">
-                      {count} scripts
+                      {count} {t('writer.scripts')}
                     </Badge>
                   ) : null;
                 }}
@@ -1581,7 +1583,7 @@ export default function Writer() {
               <ModelSelector
                 value={scriptModel}
                 onChange={setScriptModel}
-                label="Script Model"
+                label={t('writer.scriptModel')}
                 compact
               />
             </div>
@@ -1593,7 +1595,7 @@ export default function Writer() {
                 disabled={generatingOutline}
               >
                 <RefreshCw className={`h-4 w-4 mr-2 ${generatingOutline ? 'animate-spin' : ''}`} />
-                Regenerate
+                {t('common.regenerate')}
               </Button>
             </div>
           </div>
@@ -1604,7 +1606,7 @@ export default function Writer() {
               <GlassCardHeader>
                 <GlassCardTitle className="flex items-center gap-2">
                   <HistoryIcon className="h-5 w-5" />
-                  Outline Versions
+                  {t('writer.outlineVersions')}
                 </GlassCardTitle>
               </GlassCardHeader>
               <GlassCardContent>
@@ -1619,17 +1621,17 @@ export default function Writer() {
                         }`}
                     >
                       <div>
-                        <span className="font-medium">Version {index + 1}</span>
+                        <span className="font-medium">{t('writer.version')} {index + 1}</span>
                         <span className="text-sm text-muted-foreground ml-2">
                           {version.createdAt.toLocaleTimeString()}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
                         {version.script && (
-                          <Badge variant="secondary" className="text-xs">Has Script</Badge>
+                          <Badge variant="secondary" className="text-xs">{t('writer.hasScript')}</Badge>
                         )}
                         {version.id === currentOutlineVersionId && (
-                          <Badge className="text-xs">Current</Badge>
+                          <Badge className="text-xs">{t('common.current')}</Badge>
                         )}
                       </div>
                     </div>
@@ -1645,13 +1647,13 @@ export default function Writer() {
             <GlassCardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <GlassCardTitle>Content Sections</GlassCardTitle>
-                  <GlassCardDescription>{outline.sections.length} sections in your script</GlassCardDescription>
+                  <GlassCardTitle>{t('writer.contentSections')}</GlassCardTitle>
+                  <GlassCardDescription>{outline.sections.length} {t('writer.sectionsCount')}</GlassCardDescription>
                 </div>
                 {editingOutline && (
                   <Button variant="outline" size="sm" onClick={addOutlineSection}>
                     <Plus className="h-4 w-4 mr-2" />
-                    Add Section
+                    {t('writer.addSection')}
                   </Button>
                 )}
               </div>
@@ -1666,7 +1668,7 @@ export default function Writer() {
                         variant="ghost"
                         size="sm"
                         onClick={() => {
-                          const newSection = { title: "New Section", wordCount: 100, content: "", notes: "" };
+                          const newSection = { title: t('writer.newSection'), wordCount: 100, content: "", notes: "" };
                           const newSections = [...outline.sections];
                           newSections.splice(index, 0, newSection);
                           setOutline({ ...outline, sections: newSections });
@@ -1674,7 +1676,7 @@ export default function Writer() {
                         className="h-6 text-xs gap-1 text-muted-foreground hover:text-primary"
                       >
                         <Plus className="h-3 w-3" />
-                        Insert Section
+                        {t('writer.insertSection')}
                       </Button>
                     </div>
                   )}
@@ -1687,14 +1689,14 @@ export default function Writer() {
                             value={section.title}
                             onChange={e => updateOutlineSection(index, 'title', e.target.value)}
                             className="rounded-lg font-medium flex-1"
-                            placeholder="Section title..."
+                            placeholder={t('writer.sectionTitlePlaceholder')}
                           />
                           <Input
                             type="number"
                             value={section.wordCount}
                             onChange={e => updateOutlineSection(index, 'wordCount', parseInt(e.target.value) || 0)}
                             className="rounded-lg w-24"
-                            placeholder="Words"
+                            placeholder={t('writer.words')}
                           />
                           <Button
                             variant="ghost"
@@ -1709,7 +1711,7 @@ export default function Writer() {
                         <>
                           <h4 className="font-medium">{index + 1}. {section.title}</h4>
                           <div className="flex items-center gap-2">
-                            <Badge variant="outline">{section.wordCount} words</Badge>
+                            <Badge variant="outline">{section.wordCount} {t('writer.wordsSuffix')}</Badge>
                           </div>
                         </>
                       )}
@@ -1720,7 +1722,7 @@ export default function Writer() {
                           value={section.content}
                           onChange={e => updateOutlineSection(index, 'content', e.target.value)}
                           className="rounded-lg resize-none min-h-[80px]"
-                          placeholder="Section content..."
+                          placeholder={t('writer.sectionContentPlaceholder')}
                         />
                         <WordCount text={section.content} />
                       </div>
@@ -1732,13 +1734,13 @@ export default function Writer() {
                         value={section.notes || ""}
                         onChange={e => updateOutlineSection(index, 'notes', e.target.value)}
                         className="rounded-lg text-sm"
-                        placeholder="Notes (optional)..."
+                        placeholder={t('writer.notesPlaceholder')}
                       />
                     ) : section.notes && (
                       <div className="space-y-1">
                         {section.notes.includes("Unique Angle Integration") && (
                           <Badge variant="secondary" className="bg-purple-500/10 text-purple-500 border-purple-500/20 mb-1">
-                            ✨ Unique Angle Integrated
+                            ✨ {t('writer.angleIntegrated')}
                           </Badge>
                         )}
                         <p className="text-xs text-muted-foreground italic">📝 {section.notes}</p>
@@ -1751,7 +1753,7 @@ export default function Writer() {
                         <Input
                           value={sectionRewriteInput[index] || ""}
                           onChange={e => setSectionRewriteInput(prev => ({ ...prev, [index]: e.target.value }))}
-                          placeholder="Add ideas to improve this section..."
+                          placeholder={t('writer.improveSectionPlaceholder')}
                           className="rounded-lg text-sm flex-1 h-8"
                         />
                         <Button
@@ -1778,7 +1780,7 @@ export default function Writer() {
                           className="h-8 gap-1"
                         >
                           {rewritingSectionIndex === index ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
-                          Rewrite
+                          {t('common.rewrite')}
                         </Button>
                       </div>
                     )}
@@ -1796,7 +1798,7 @@ export default function Writer() {
                     className="h-8 gap-1"
                   >
                     <Plus className="h-4 w-4" />
-                    Add Section at End
+                    {t('writer.addSectionEnd')}
                   </Button>
                 </div>
               )}
@@ -1805,7 +1807,7 @@ export default function Writer() {
 
           <div className="flex gap-4">
             <Button variant="outline" className="flex-1 rounded-xl h-12" onClick={() => setCurrentStep("input")}>
-              ← Back to Input
+              ← {t('writer.backToInput')}
             </Button>
             <Button
               className="flex-1 gap-2 rounded-xl h-12 shadow-lg shadow-primary/20"
@@ -1815,12 +1817,12 @@ export default function Writer() {
               {generatingScript ? (
                 <>
                   <Loader2 className="h-5 w-5 animate-spin" />
-                  {scriptProgress || "Starting..."}
+                  {scriptProgress || t('common.starting')}
                 </>
               ) : (
                 <>
                   <PenTool className="h-5 w-5" />
-                  Write Full Script
+                  {t('writer.writeFullScript')}
                   <ChevronRight className="h-4 w-4" />
                 </>
               )}
@@ -1838,13 +1840,13 @@ export default function Writer() {
               <GlassCard>
                 <GlassCardHeader className="py-3 px-4">
                   <div className="flex items-center justify-between">
-                    <GlassCardTitle className="text-sm">SEO Metadata</GlassCardTitle>
+                    <GlassCardTitle className="text-sm">{t('writer.seoMetadata')}</GlassCardTitle>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={async () => {
                         if (!generatedScript) {
-                          toast({ title: "Generate script first", variant: "destructive" });
+                          toast({ title: t('writer.generateScriptFirst'), variant: "destructive" });
                           return;
                         }
                         setGeneratingSEO(true);
@@ -1855,7 +1857,7 @@ export default function Writer() {
                           setScriptTitle(seoResult.title);
                           setScriptDescription(seoResult.description);
                           setScriptTags(seoResult.tags.join(", "));
-                          toast({ title: "SEO metadata generated!" });
+                          toast({ title: t('writer.seoGenerated') });
                         }
                         setGeneratingSEO(false);
                       }}
@@ -1863,7 +1865,7 @@ export default function Writer() {
                       className="h-7 gap-1"
                     >
                       {generatingSEO ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                      Generate SEO
+                      {t('writer.generateSeo')}
                     </Button>
                   </div>
                 </GlassCardHeader>
@@ -1871,7 +1873,7 @@ export default function Writer() {
                   {/* Title */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label className="text-sm font-medium">Title</Label>
+                      <Label className="text-sm font-medium">{t('common.title')}</Label>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -1885,7 +1887,7 @@ export default function Writer() {
                     <Input
                       value={scriptTitle}
                       onChange={(e) => setScriptTitle(e.target.value)}
-                      placeholder="Enter video title..."
+                      placeholder={t('writer.titlePlaceholder')}
                       className="bg-background/50"
                     />
                   </div>
@@ -1893,7 +1895,7 @@ export default function Writer() {
                   {/* Description */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label className="text-sm font-medium">Description</Label>
+                      <Label className="text-sm font-medium">{t('common.description')}</Label>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -1907,7 +1909,7 @@ export default function Writer() {
                     <Textarea
                       value={scriptDescription}
                       onChange={(e) => setScriptDescription(e.target.value)}
-                      placeholder="Enter video description..."
+                      placeholder={t('writer.descriptionPlaceholder')}
                       className="min-h-[80px] resize-none bg-background/50"
                     />
                   </div>
@@ -1917,7 +1919,7 @@ export default function Writer() {
                     <div className="flex items-center justify-between">
                       <Label className="text-sm font-medium flex items-center gap-1">
                         <Tag className="h-3 w-3" />
-                        Tags
+                        {t('common.tags')}
                       </Label>
                       <Button
                         variant="ghost"
@@ -1932,7 +1934,7 @@ export default function Writer() {
                     <Input
                       value={scriptTags}
                       onChange={(e) => setScriptTags(e.target.value)}
-                      placeholder="Enter tags (comma separated)..."
+                      placeholder={t('writer.tagsPlaceholder')}
                       className="bg-background/50"
                     />
                   </div>
@@ -1948,9 +1950,9 @@ export default function Writer() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <GlassCardTitle className="flex items-center gap-2 text-base">
                           <PenTool className="h-4 w-4 text-primary" />
-                          Script
+                          {t('writer.steps.script')}
                         </GlassCardTitle>
-                        <Badge className="bg-green-500/10 text-green-600 text-xs">Done</Badge>
+                        <Badge className="bg-green-500/10 text-green-600 text-xs">{t('common.done')}</Badge>
                         <WordCount text={generatedScript} showCharacters />
                       </div>
                       <div className="flex items-center gap-2 flex-wrap">
@@ -1958,16 +1960,16 @@ export default function Writer() {
                           variant="outline"
                           size="sm"
                           className="gap-1 h-8 text-xs"
-                          onClick={() => handleCopyText(generatedScript, "kịch bản")}
+                          onClick={() => handleCopyText(generatedScript, t('writer.steps.script'))}
                           disabled={!generatedScript}
                         >
                           <Copy className="h-3 w-3" />
-                          Copy All
+                          {t('common.copyAll')}
                         </Button>
                         <ModelSelector
                           value={scriptModel}
                           onChange={setScriptModel}
-                          label="Model"
+                          label={t('common.model')}
                           compact
                         />
                         <VersionHistory
@@ -1992,7 +1994,7 @@ export default function Writer() {
                           ) : (
                             <Star className="h-3 w-3" />
                           )}
-                          Score
+                          {t('common.score')}
                         </Button>
                       </div>
                     </div>
@@ -2043,7 +2045,7 @@ export default function Writer() {
                               <Input
                                 value={sectionRewriteInput[index + 1000] || ""}
                                 onChange={e => setSectionRewriteInput(prev => ({ ...prev, [index + 1000]: e.target.value }))}
-                                placeholder="Ideas to improve this section..."
+                                placeholder={t('writer.improveSectionPlaceholder')}
                                 className="text-sm flex-1 h-8"
                               />
                               <Button
@@ -2074,7 +2076,7 @@ export default function Writer() {
                                 className="h-8 gap-1"
                               >
                                 {rewritingSectionIndex === index + 1000 ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
-                                Rewrite
+                                {t('common.rewrite')}
                               </Button>
                             </div>
                           </GlassCardContent>
@@ -2106,9 +2108,9 @@ export default function Writer() {
                   <GlassCardContent className="p-8 text-center space-y-4">
                     <Star className="h-12 w-12 text-muted-foreground/30 mx-auto" />
                     <div className="space-y-1">
-                      <p className="font-medium text-muted-foreground">No Score Yet</p>
+                      <p className="font-medium text-muted-foreground">{t('writer.script.noScore')}</p>
                       <p className="text-sm text-muted-foreground/70">
-                        Click "Score Script" to analyze your script's viral potential
+                        {t('writer.script.clickScore')}
                       </p>
                     </div>
                   </GlassCardContent>
