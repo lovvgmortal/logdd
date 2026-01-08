@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { GlassCard, GlassCardContent, GlassCardHeader, GlassCardTitle, GlassCardDescription } from "@/components/ui/glass-card";
-import { Sparkles, Mail, Lock, Loader2, User, Eye, EyeOff, ArrowRight, Dna, Zap, Target } from "lucide-react";
+import { Sparkles, Mail, Lock, Loader2, User, Eye, EyeOff, ArrowRight, Dna, Zap, Target, Globe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/hooks/useLanguage";
 
@@ -20,7 +20,11 @@ export default function Auth() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const { user, signIn, signUp } = useAuth();
   const { toast } = useToast();
-  const { t } = useLanguage();
+  const { t, language, setLanguage } = useLanguage();
+
+  const toggleLanguage = () => {
+    setLanguage(language === 'vi' ? 'en' : 'vi');
+  };
 
   if (user) {
     return <Navigate to="/" replace />;
@@ -99,7 +103,18 @@ export default function Auth() {
   ];
 
   return (
-    <div className="min-h-screen flex overflow-hidden">
+    <div className="min-h-screen flex overflow-hidden relative">
+      <div className="absolute top-4 right-4 z-50">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={toggleLanguage}
+          className="gap-2 bg-background/50 backdrop-blur-sm border border-border/50 shadow-sm hover:bg-primary/20 hover:text-primary transition-all duration-300"
+        >
+          <Globe className="h-4 w-4" />
+          <span className="font-medium">{language === 'vi' ? 'Tiếng Việt' : 'English'}</span>
+        </Button>
+      </div>
       {/* Left Side - Branding with animated background */}
       <div className="hidden lg:flex lg:w-1/2 relative p-12 flex-col justify-between">
         {/* Animated gradient background */}
@@ -110,7 +125,7 @@ export default function Auth() {
         </div>
 
         {/* Content */}
-        <div className="relative z-10">
+        <div className="relative z-10 w-full flex justify-between items-start">
           <div className="flex items-center gap-3">
             <div className="rounded-2xl bg-primary/20 backdrop-blur-sm p-3 border border-primary/20">
               <Sparkles className="h-7 w-7 text-primary" />

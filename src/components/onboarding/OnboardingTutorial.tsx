@@ -72,7 +72,7 @@ const steps = [
     icon: Users,
     color: "text-green-500",
     tips: [
-      "Create personas with demographics and preferences",
+      "Create personas with age range and preferences",
       "Define pain points and knowledge level",
       "Apply personas to scripts for targeted content",
     ],

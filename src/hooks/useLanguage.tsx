@@ -24,7 +24,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
                 return saved;
             }
         }
-        return 'en';
+        return 'vi';
     });
 
     const setLanguage = (lang: Language) => {

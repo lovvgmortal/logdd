@@ -7,22 +7,6 @@ export interface AnalyzedPersona {
   knowledgeLevel: string;
   targetCountry?: string; // Target audience country/region
 
-  // Knowledge Profile (3-dimensional assessment)
-  knowledgeProfile?: {
-    domainKnowledge: number; // 1-5: Complete beginner to Expert
-    engagementDepth: number; // 1-5: Casual viewer to Deep researcher
-    skepticismLevel: number; // 1-5: Highly trusting to Extremely skeptical
-    reasoning: string;
-  };
-
-  // Demographics
-  demographics?: {
-    ageEvidence: string;
-    locationHints: string;
-    occupationInference: string;
-    digitalFluency: 'low' | 'medium' | 'high';
-  };
-
   // Content Consumption Patterns
   contentConsumption?: {
     attentionSpan: 'short' | 'medium' | 'long';
@@ -34,7 +18,6 @@ export interface AnalyzedPersona {
   // Psychology
   painPoints: string[] | Array<{ text: string; intensity: 'high' | 'medium' | 'low'; evidence: string }>;
   motivations?: string[] | Array<{ text: string; frequency: 'high' | 'medium' | 'low'; source: string }>;
-  objections?: string[] | Array<{ text: string; frequency: 'high' | 'medium' | 'low'; source: string }>;
 
   // Trust Profile (MỚI - trigger tin tưởng)
   // Cho phép custom trust types ngoài 4 loại cơ bản (data/story/authority/social-proof)
@@ -150,14 +133,10 @@ Look for behavioral patterns:
    - Intensity: high (mentioned repeatedly with strong emotion), medium (consistent mention), low (occasional concern)
    - Evidence: "Mentioned in 15+ comments" or "Implied from frustration pattern in Y discussion"
 
-5. MOTIVATIONS & OBJECTIONS WITH CONTEXT:
+5. MOTIVATIONS WITH CONTEXT:
    For motivations: What drives them to watch/engage?
    - Frequency: high (dominant driver), medium (common reason), low (occasional motivator)
    - Source: "Positive comments analysis" or "Success story responses"
-
-   For objections: What prevents engagement or creates skepticism?
-   - Frequency: high (major barrier), medium (common concern), low (minor hesitation)
-   - Source: "Negative comments" or "Skeptical questions pattern"
 
 6. TRUST PROFILE ANALYSIS (MỚI):
    Determine what type of proof they trust most. Choose from common types OR create a custom type:
@@ -217,20 +196,6 @@ Return ONLY valid JSON (no markdown, no explanations):
 
   "targetCountry": "USA | UK | Vietnam | Japan | Korea | India | Germany | France | Other (Inferred from timezone patterns, currency mentions, cultural references, language patterns, location-specific mentions)",
 
-  "knowledgeProfile": {
-    "domainKnowledge": 3,
-    "engagementDepth": 4,
-    "skepticismLevel": 2,
-    "reasoning": "Intermediate domain knowledge evidenced by basic concept understanding but confusion on advanced terms. High engagement depth shown by follow-up questions. Low skepticism - accepts explanations readily."
-  },
-
-  "demographics": {
-    "ageEvidence": "Uses phrases like 'just graduated', mentions student loans, employs Gen Z slang",
-    "locationHints": "Mentions PST timezone, references US-specific cultural events",
-    "occupationInference": "Early career tech worker based on software terminology and work schedule comments",
-    "digitalFluency": "high"
-  },
-
   "contentConsumption": {
     "attentionSpan": "medium",
     "engagementTriggers": ["data-driven", "story-driven"],
@@ -278,19 +243,6 @@ Return ONLY valid JSON (no markdown, no explanations):
     }
   ],
 
-  "objections": [
-    {
-      "text": "Skeptical of 'get rich quick' claims",
-      "frequency": "high",
-      "source": "Negative reactions to overpromising content"
-    },
-    {
-      "text": "Concerned about time investment vs. results",
-      "frequency": "medium",
-      "source": "Questions about ROI and realistic timelines"
-    }
-  ],
-
   "trustProfile": {
     "primary": "data|story|authority|social-proof",
     "secondary": "data|story|authority|social-proof (optional)",
@@ -319,7 +271,6 @@ Flag potential inconsistencies:
 - If knowledgeLevel="beginner" BUT vocabulary includes "advanced technical jargon" → Add note about mismatch
 - If preferredTone="formal" BUT platform="TikTok" → Flag platform-tone mismatch
 - Ensure painPoints align with knowledgeLevel (beginners and experts have different pain points)
-- Verify demographics inferences are evidence-based, not assumptions
 </validation_rules>
 
 <quality_standards>

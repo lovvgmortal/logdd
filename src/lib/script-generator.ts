@@ -181,11 +181,6 @@ export const generateOutline = async (
         systemPrompt += `\n- Preferred Formats: ${params.persona.content_consumption.preferredFormats.join(', ')}`;
       }
     }
-
-    // Legacy objections field (backward compatibility)
-    if (params.persona.objections?.length > 0) {
-      systemPrompt += `\n- General Objections: ${params.persona.objections.join(', ')}`;
-    }
   } else if (params.dna?.analysis_data?.audiencePsychology) {
     // Fallback to DNA audience psychology
     systemPrompt += `\n\nTARGET AUDIENCE (Inferred from source DNA):
@@ -415,8 +410,7 @@ export const generateScriptFromOutline = async (
 - Knowledge Level: ${params.persona.knowledge_level || 'intermediate'}
 - Pain Points: ${params.persona.pain_points?.join(', ') || 'Not specified'}
 - Preferred Tone: ${params.persona.preferred_tone || 'casual'}
-- Vocabulary: ${params.persona.vocabulary || 'conversational'}
-- Objections to Address: ${params.persona.objections?.join(', ') || 'Not specified'}`;
+- Vocabulary: ${params.persona.vocabulary || 'conversational'}`;
   } else if (params.dna?.analysis_data?.audiencePsychology) {
     // Fallback to DNA audience psychology
     systemPrompt += `\n\nTARGET AUDIENCE (Inferred from source DNA):

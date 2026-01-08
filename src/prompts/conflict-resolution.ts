@@ -202,12 +202,12 @@ export const detectConflicts = (dna: any, persona: any): string[] => {
     }
   }
 
-  // Knowledge profile mismatch
-  if (dna?.analysis_data?.audiencePsychology && persona?.knowledge_profile) {
+  // Knowledge level mismatch
+  if (dna?.analysis_data?.audiencePsychology && persona?.knowledge_level) {
     const dnaAudienceSuggests = dna.analysis_data.audiencePsychology.toLowerCase();
-    const personaKnowledge = persona.knowledge_profile.domainKnowledge;
+    const personaLevel = persona.knowledge_level.toLowerCase();
 
-    if (dnaAudienceSuggests.includes('expert') && personaKnowledge < 3) {
+    if (dnaAudienceSuggests.includes('expert') && (personaLevel === 'beginner' || personaLevel === 'intermediate')) {
       conflicts.push('DNA targets expert audience but Persona has intermediate/beginner knowledge');
     }
   }

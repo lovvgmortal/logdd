@@ -18,21 +18,8 @@ export interface Persona {
   platform: string | null;
   description: string | null;
   motivations: string[] | Array<{ text: string; frequency: string; source: string }> | null;
-  objections: string[] | Array<{ text: string; frequency: string; source: string }> | null;
   content_sources: any[] | null; // JSONB array of { id, script, youtubeUrl, comments }
   // Extended fields (from enhanced analysis)
-  knowledge_profile?: {
-    domainKnowledge: number;
-    engagementDepth: number;
-    skepticismLevel: number;
-    reasoning: string;
-  } | null;
-  demographics?: {
-    ageEvidence: string;
-    locationHints: string;
-    occupationInference: string;
-    digitalFluency: string;
-  } | null;
   content_consumption?: {
     attentionSpan: string;
     engagementTriggers: string[];
@@ -97,7 +84,6 @@ export function usePersonas() {
         platform: persona.platform,
         description: persona.description,
         motivations: persona.motivations,
-        objections: persona.objections,
         content_sources: persona.content_sources,
       };
 

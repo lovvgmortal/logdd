@@ -32,6 +32,178 @@ const AVAILABLE_MODELS = [
   { value: "openai/gpt-oss-120b:free", label: "GPT-OSS 120B (Free)" },
 ];
 
+const getKnowledgeValue = (level: string | null) => {
+  switch (level) {
+    case "complete-beginner": return 20;
+    case "beginner": return 40;
+    case "intermediate": return 60;
+    case "advanced": return 80;
+    case "expert": return 100;
+    default: return 50;
+  }
+};
+
+const getRandomColor = (index: number) => COLORS[index % COLORS.length];
+
+interface PersonaCardProps {
+  persona: Persona;
+  index: number;
+  onEdit: (persona: Persona) => void;
+  onDelete: (id: string) => void;
+  t: (key: string) => string;
+}
+
+const PersonaCard = ({ persona, index, onEdit, onDelete, t }: PersonaCardProps) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <GlassCard variant="elevated" className="group flex flex-col h-full">
+      <GlassCardHeader className="pb-3">
+        <div className="flex items-start justify-between">
+          <Avatar className="h-12 w-12">
+            <AvatarFallback className={`${getRandomColor(index)} text-primary-foreground font-semibold`}>
+              {persona.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+            <Button variant="ghost" size="icon" onClick={() => onEdit(persona)}>
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => onDelete(persona.id)}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        <GlassCardTitle className="mt-3 text-lg line-clamp-1">{persona.name}</GlassCardTitle>
+        <GlassCardDescription className="line-clamp-2 min-h-[40px]">
+          {persona.age_range && `${t('personas.age')} ${persona.age_range}`}
+          {persona.age_range && (persona.target_country || persona.platform) && " • "}
+          {persona.target_country && (
+            <span className="inline-flex items-center gap-1">
+              <Globe className="h-3 w-3" />
+              {persona.target_country}
+            </span>
+          )}
+          {persona.target_country && persona.platform && " • "}
+          {persona.platform}
+        </GlassCardDescription>
+      </GlassCardHeader>
+
+      <GlassCardContent className="space-y-4 flex-1">
+        {/* Knowledge Level - Always Visible */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-sm">
+            <span className="flex items-center gap-2 text-muted-foreground">
+              <Brain className="h-4 w-4" />
+              {t('personas.card.knowledge')}
+            </span>
+            <span className="font-medium capitalize">{persona.knowledge_level || t('personas.intermediate')}</span>
+          </div>
+          <Progress
+            value={getKnowledgeValue(persona.knowledge_level)}
+            className="h-1.5"
+          />
+        </div>
+
+        {/* Pain Points - Always Visible (Limited) */}
+        {persona.pain_points && persona.pain_points.length > 0 && (
+          <div className="space-y-2">
+            <span className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Target className="h-4 w-4" />
+              {t('personas.card.painPoints')}
+            </span>
+            <div className="flex flex-wrap gap-1.5">
+              {persona.pain_points.slice(0, 2).map((point, idx) => {
+                const text = typeof point === 'string' ? point : point.text;
+                const intensity = typeof point === 'object' && point.intensity ? point.intensity : null;
+                return (
+                  <span
+                    key={idx}
+                    className={`rounded-lg px-2 py-1 text-xs font-medium truncate max-w-full ${intensity === 'high' ? 'bg-red-500/20 text-red-600' :
+                      intensity === 'medium' ? 'bg-orange-500/20 text-orange-600' :
+                        intensity === 'low' ? 'bg-yellow-500/20 text-yellow-600' :
+                          'bg-accent text-accent-foreground'
+                      }`}
+                  >
+                    {text}
+                  </span>
+                );
+              })}
+              {persona.pain_points.length > 2 && (
+                <span className="rounded-lg bg-muted px-2 py-1 text-xs text-muted-foreground">
+                  +{persona.pain_points.length - 2}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Expanded Content - Hidden by default */}
+        {isExpanded && (
+          <div className="space-y-4 pt-4 border-t border-border/50 animate-in fade-in slide-in-from-top-1 duration-200">
+            {/* Content Consumption (Extended) */}
+            {persona.content_consumption && (
+              <div className="space-y-1.5 text-xs">
+                <span className="flex items-center gap-2 text-sm text-muted-foreground font-medium">
+                  <Target className="h-4 w-4" />
+                  {t('personas.card.contentPreferences')}
+                </span>
+                {persona.content_consumption.attentionSpan && (
+                  <div><span className="text-muted-foreground">{t('personas.card.attention')}:</span> <span className="capitalize">{persona.content_consumption.attentionSpan}</span></div>
+                )}
+                {persona.content_consumption.engagementTriggers && persona.content_consumption.engagementTriggers.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {persona.content_consumption.engagementTriggers.map(trigger => (
+                      <span key={trigger} className="rounded-md bg-blue-500/10 text-blue-600 px-1.5 py-0.5 text-xs">{trigger}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Motivations */}
+            {persona.motivations && persona.motivations.length > 0 && (
+              <div className="space-y-2">
+                <span className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Zap className="h-4 w-4" />
+                  {t('personas.card.motivations')}
+                </span>
+                <p className="text-xs text-foreground/80">
+                  {Array.isArray(persona.motivations) && typeof persona.motivations[0] === 'string'
+                    ? persona.motivations.join(", ")
+                    : persona.motivations.map((m: any) => m.text || m).join(", ")}
+                </p>
+              </div>
+            )}
+
+            {/* Tone */}
+            {persona.preferred_tone && (
+              <div className="flex items-center gap-2 text-sm pt-2 border-t border-border/50">
+                <MessageCircle className="h-4 w-4 text-muted-foreground" />
+                <span className="text-muted-foreground">{t('personas.tone')}:</span>
+                <span className="font-medium">{persona.preferred_tone}</span>
+              </div>
+            )}
+          </div>
+        )}
+      </GlassCardContent>
+
+      {/* Footer Toggle */}
+      <div
+        className="py-2 px-4 border-t border-border/30 bg-muted/20 flex items-center justify-center cursor-pointer hover:bg-muted/40 transition-colors"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <span className="text-xs text-muted-foreground flex items-center gap-1 font-medium">
+          {isExpanded ? (
+            <ChevronRight className="h-4 w-4 -rotate-90" />
+          ) : (
+            <ChevronRight className="h-4 w-4 rotate-90" />
+          )}
+        </span>
+      </div>
+    </GlassCard>
+  );
+};
 export default function Personas() {
   const { personas, loading, createPersona, updatePersona, deletePersona, analyzePersona } = usePersonas();
   const { t } = useLanguage();
@@ -66,7 +238,6 @@ export default function Personas() {
 
   // New Data Fields
   const [motivations, setMotivations] = useState("");
-  const [objections, setObjections] = useState("");
 
   // NEW ENHANCED FIELDS - Text inputs for AI to fill
   const [trustProfilePrimary, setTrustProfilePrimary] = useState<string>('');
@@ -101,7 +272,6 @@ export default function Personas() {
     setSources([{ id: crypto.randomUUID(), script: "", youtubeUrl: "", comments: "" }]);
 
     setMotivations("");
-    setObjections("");
     setTargetCountry("");
 
     // Reset new enhanced fields
@@ -129,16 +299,15 @@ export default function Personas() {
     setPlatform(persona.platform || "");
     setDescription(persona.description || "");
     setMotivations(persona.motivations?.join(", ") || "");
-    setObjections(persona.objections?.join(", ") || "");
     setTargetCountry(persona.target_country || "");
 
     // Load new enhanced fields
-    if (persona.trust_profile) {
-      setTrustProfilePrimary(persona.trust_profile.primary || '');
-      setTrustProfileSecondary(persona.trust_profile.secondary || '');
-      setTrustProfileReasoning(persona.trust_profile.reasoning || "");
-    }
-    setActionBarriers(Array.isArray(persona.action_barriers) ? persona.action_barriers.join(', ') : '');
+    // if (persona.trust_profile) {
+    //   setTrustProfilePrimary(persona.trust_profile.primary || '');
+    //   setTrustProfileSecondary(persona.trust_profile.secondary || '');
+    //   setTrustProfileReasoning(persona.trust_profile.reasoning || "");
+    // }
+    //setActionBarriers(Array.isArray(persona.action_barriers) ? persona.action_barriers.join(', ') : '');
     if (persona.content_consumption) {
       setAttentionSpan(persona.content_consumption.attentionSpan || '');
     }
@@ -217,18 +386,10 @@ export default function Personas() {
           setMotivations(motivationsText || motivations);
         }
 
-        // Handle objections (string[] or object[])
-        if (Array.isArray(result.objections)) {
-          const objectionsText = result.objections.map(o => typeof o === 'string' ? o : o.text).join(", ");
-          setObjections(objectionsText || objections);
-        }
-
         // Store extended fields for saving (we'll add state for these)
-        if (result.knowledgeProfile || result.demographics || result.contentConsumption) {
+        if (result.contentConsumption) {
           // @ts-ignore - Add to window temporary storage for now
           window.__tempPersonaExtended = {
-            knowledge_profile: result.knowledgeProfile,
-            demographics: result.demographics,
             content_consumption: result.contentConsumption
           };
         }
@@ -249,7 +410,6 @@ export default function Personas() {
       platform: platform || null,
       description: description || null,
       motivations: motivations ? motivations.split(",").map(p => p.trim()).filter(Boolean) : null,
-      objections: objections ? objections.split(",").map(p => p.trim()).filter(Boolean) : null,
       content_sources: sources, // Save sources
 
       // NEW ENHANCED FIELDS
@@ -270,8 +430,6 @@ export default function Personas() {
     if (window.__tempPersonaExtended) {
       // @ts-ignore
       const extended = window.__tempPersonaExtended;
-      if (extended.knowledge_profile) personaData.knowledge_profile = extended.knowledge_profile;
-      if (extended.demographics) personaData.demographics = extended.demographics;
       if (extended.content_consumption) personaData.content_consumption = extended.content_consumption;
       // @ts-ignore
       delete window.__tempPersonaExtended; // Cleanup
@@ -294,18 +452,7 @@ export default function Personas() {
     await deletePersona(id);
   };
 
-  const getKnowledgeValue = (level: string | null) => {
-    switch (level) {
-      case "complete-beginner": return 20;
-      case "beginner": return 40;
-      case "intermediate": return 60;
-      case "advanced": return 80;
-      case "expert": return 100;
-      default: return 50;
-    }
-  };
 
-  const getRandomColor = (index: number) => COLORS[index % COLORS.length];
 
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-6">
@@ -346,174 +493,14 @@ export default function Personas() {
         /* Personas Grid */
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredPersonas.map((persona, index) => (
-            <GlassCard key={persona.id} variant="elevated" className="group">
-              <GlassCardHeader>
-                <div className="flex items-start justify-between">
-                  <Avatar className="h-12 w-12">
-                    <AvatarFallback className={`${getRandomColor(index)} text-primary-foreground font-semibold`}>
-                      {persona.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(persona)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(persona.id)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-                <GlassCardTitle className="mt-3">{persona.name}</GlassCardTitle>
-                <GlassCardDescription>
-                  {persona.age_range && `${t('personas.age')} ${persona.age_range}`}
-                  {persona.age_range && (persona.target_country || persona.platform) && " • "}
-                  {persona.target_country && (
-                    <span className="inline-flex items-center gap-1">
-                      <Globe className="h-3 w-3" />
-                      {persona.target_country}
-                    </span>
-                  )}
-                  {persona.target_country && persona.platform && " • "}
-                  {persona.platform}
-                </GlassCardDescription>
-              </GlassCardHeader>
-              <GlassCardContent className="space-y-4">
-                {/* Knowledge Level */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="flex items-center gap-2 text-muted-foreground">
-                      <Brain className="h-4 w-4" />
-                      Knowledge
-                    </span>
-                    <span className="font-medium capitalize">{persona.knowledge_level || t('personas.intermediate')}</span>
-                  </div>
-                  <Progress
-                    value={getKnowledgeValue(persona.knowledge_level)}
-                    className="h-1.5"
-                  />
-                </div>
-
-                {/* Knowledge Profile (Extended) */}
-                {persona.knowledge_profile && (
-                  <div className="space-y-2 p-3 rounded-lg bg-primary/5 border border-primary/10">
-                    <span className="text-xs font-semibold text-primary">{t('personas.knowledgeProfile')}</span>
-                    <div className="grid grid-cols-3 gap-2 text-xs">
-                      <div className="text-center">
-                        <div className="font-bold text-lg text-primary">{persona.knowledge_profile.domainKnowledge}</div>
-                        <div className="text-muted-foreground">{t('personas.domain')}</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="font-bold text-lg text-primary">{persona.knowledge_profile.engagementDepth}</div>
-                        <div className="text-muted-foreground">{t('personas.engagement')}</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="font-bold text-lg text-primary">{persona.knowledge_profile.skepticismLevel}</div>
-                        <div className="text-muted-foreground">{t('personas.skepticism')}</div>
-                      </div>
-                    </div>
-                    {persona.knowledge_profile.reasoning && (
-                      <p className="text-xs text-muted-foreground italic">{persona.knowledge_profile.reasoning}</p>
-                    )}
-                  </div>
-                )}
-
-                {/* Pain Points */}
-                {persona.pain_points && persona.pain_points.length > 0 && (
-                  <div className="space-y-2">
-                    <span className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Target className="h-4 w-4" />
-                      Pain Points
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {persona.pain_points.slice(0, 2).map((point, idx) => {
-                        const text = typeof point === 'string' ? point : point.text;
-                        const intensity = typeof point === 'object' && point.intensity ? point.intensity : null;
-                        return (
-                          <span
-                            key={idx}
-                            className={`rounded-lg px-2 py-1 text-xs font-medium ${intensity === 'high' ? 'bg-red-500/20 text-red-600' :
-                              intensity === 'medium' ? 'bg-orange-500/20 text-orange-600' :
-                                intensity === 'low' ? 'bg-yellow-500/20 text-yellow-600' :
-                                  'bg-accent text-accent-foreground'
-                              }`}
-                          >
-                            {text}
-                          </span>
-                        );
-                      })}
-                      {persona.pain_points.length > 2 && (
-                        <span className="rounded-lg bg-muted px-2 py-1 text-xs text-muted-foreground">
-                          +{persona.pain_points.length - 2}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Demographics (Extended) */}
-                {persona.demographics && (
-                  <div className="space-y-1.5 text-xs">
-                    <span className="flex items-center gap-2 text-sm text-muted-foreground font-medium">
-                      <Users className="h-4 w-4" />
-                      Demographics Inference
-                    </span>
-                    {persona.demographics.ageEvidence && (
-                      <div><span className="text-muted-foreground">Age:</span> {persona.demographics.ageEvidence}</div>
-                    )}
-                    {persona.demographics.occupationInference && (
-                      <div><span className="text-muted-foreground">Occupation:</span> {persona.demographics.occupationInference}</div>
-                    )}
-                    {persona.demographics.digitalFluency && (
-                      <div><span className="text-muted-foreground">Digital Fluency:</span> <span className="capitalize">{persona.demographics.digitalFluency}</span></div>
-                    )}
-                  </div>
-                )}
-
-                {/* Content Consumption (Extended) */}
-                {persona.content_consumption && (
-                  <div className="space-y-1.5 text-xs">
-                    <span className="flex items-center gap-2 text-sm text-muted-foreground font-medium">
-                      <Target className="h-4 w-4" />
-                      Content Preferences
-                    </span>
-                    {persona.content_consumption.attentionSpan && (
-                      <div><span className="text-muted-foreground">Attention:</span> <span className="capitalize">{persona.content_consumption.attentionSpan}</span></div>
-                    )}
-                    {persona.content_consumption.engagementTriggers && persona.content_consumption.engagementTriggers.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {persona.content_consumption.engagementTriggers.map(trigger => (
-                          <span key={trigger} className="rounded-md bg-blue-500/10 text-blue-600 px-1.5 py-0.5 text-xs">{trigger}</span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Motivations (New) */}
-                {persona.motivations && persona.motivations.length > 0 && (
-                  <div className="space-y-2">
-                    <span className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Zap className="h-4 w-4" />
-                      Motivations
-                    </span>
-                    <p className="text-xs text-foreground/80 line-clamp-1">
-                      {Array.isArray(persona.motivations) && typeof persona.motivations[0] === 'string'
-                        ? persona.motivations.join(", ")
-                        : persona.motivations.map((m: any) => m.text || m).join(", ")}
-                    </p>
-                  </div>
-                )}
-
-                {/* Tone */}
-                {persona.preferred_tone && (
-                  <div className="flex items-center gap-2 text-sm pt-2 border-t border-border/50">
-                    <MessageCircle className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">{t('personas.tone')}:</span>
-                    <span className="font-medium">{persona.preferred_tone}</span>
-                  </div>
-                )}
-              </GlassCardContent>
-            </GlassCard>
+            <PersonaCard
+              key={persona.id}
+              persona={persona}
+              index={index}
+              onEdit={openEditDialog}
+              onDelete={handleDelete}
+              t={t}
+            />
           ))}
         </div>
       )}
@@ -638,7 +625,7 @@ export default function Personas() {
                           <Textarea
                             value={source.comments}
                             onChange={(e) => updateSource(source.id, "comments", e.target.value)}
-                            placeholder="Community comments..."
+                            placeholder={t('personas.dialog.communityCommentsPlaceholder')}
                             className="min-h-[80px] resize-none"
                           />
                         </div>
@@ -748,14 +735,6 @@ export default function Personas() {
                 value={motivations}
                 onChange={(e) => setMotivations(e.target.value)}
                 placeholder={t('personas.dialog.motivationsPlaceholder')}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>{t('personas.dialog.objectionsLabel')}</Label>
-              <Input
-                value={objections}
-                onChange={(e) => setObjections(e.target.value)}
-                placeholder={t('personas.dialog.objectionsPlaceholder')}
               />
             </div>
 

@@ -134,10 +134,8 @@ For EACH section in the provided structure:
    - hookAngle: Category and psychological mechanism
    - corePatterns: Success patterns that work
    - viralXFactors: Unique elements
-   - flopAvoidance: Anti-patterns from flop videos
    - highDopamine: High engagement moments
-   - confusionPoints: Where viewers got lost
-   - objections: Common pushbacks
+   - frictionPoints: Confusion points, objections, and anti-patterns to avoid
 
 </instructions>
 
@@ -187,11 +185,15 @@ Return complete DNA with enriched structural skeleton:
   ],
 
   "highDopamine": ["Engagement elements"],
-  "confusionPoints": ["Where viewers got lost"],
-  "objections": ["Common pushbacks"],
   "corePatterns": ["Success patterns"],
   "viralXFactors": ["Unique elements"],
-  "flopAvoidance": ["Anti-patterns"],
+  "frictionPoints": [
+    {
+      "type": "confusion|objection|anti-pattern",
+      "point": "Specific friction point",
+      "solution": "How to avoid or address it"
+    }
+  ],
 
   "persuasionFlow": {
     "framework": "PAS|BAB|Story-Based|Custom",
@@ -387,14 +389,6 @@ Return a single valid JSON object with this exact structure:
     "Specific engagement elements that triggered high viewer response (identified from comments/metrics)"
   ],
 
-  "confusionPoints": [
-    "Moments where viewers got lost or needed clarification (identified from comments)"
-  ],
-
-  "objections": [
-    "Common pushbacks, disagreements, or skepticism expressed in comments"
-  ],
-
   "corePatterns": [
     "Pattern Name: Why it works (psychological/structural mechanism)"
   ],
@@ -403,8 +397,22 @@ Return a single valid JSON object with this exact structure:
     "Unique Element: Why it stood out from typical content in this niche"
   ],
 
-  "flopAvoidance": [
-    "Specific anti-patterns extracted from Flop content that MUST be avoided"
+  "frictionPoints": [
+    {
+      "type": "confusion",
+      "point": "Moment where viewers got lost or needed clarification",
+      "solution": "How to explain it better or add context"
+    },
+    {
+      "type": "objection",
+      "point": "Common pushback or skepticism from comments",
+      "solution": "How to address or pre-empt this objection"
+    },
+    {
+      "type": "anti-pattern",
+      "point": "Specific mistake from Flop content that MUST be avoided",
+      "solution": "What to do instead"
+    }
   ]
 }
 </output_schema>

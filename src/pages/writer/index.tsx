@@ -1401,7 +1401,7 @@ export default function Writer() {
                         variant="outline"
                         size="sm"
                         onClick={addViralReference}
-                        className="w-full gap-2 border-dashed border-green-500/50 text-green-600 hover:bg-green-500/5"
+                        className="w-full gap-2 border-dashed border-primary/50 text-primary hover:bg-primary/20 hover:border-primary"
                       >
                         <Plus className="h-4 w-4" />
                         {t('writer.addViralRef')}
@@ -1453,16 +1453,16 @@ export default function Writer() {
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
                             <div className="space-y-1">
-                              <Label className="text-xs text-muted-foreground">Title</Label>
+                              <Label className="text-xs text-muted-foreground">{t('writer.refTitle')}</Label>
                               <Input
-                                placeholder="e.g., Why my video flopped"
+                                placeholder={t('writer.refTitlePlaceholder')}
                                 value={ref.title}
                                 onChange={(e) => updateFlopReference(ref.id, "title", e.target.value)}
                                 className="h-8 text-sm"
                               />
                             </div>
                             <div className="space-y-1">
-                              <Label className="text-xs text-muted-foreground">YouTube URL</Label>
+                              <Label className="text-xs text-muted-foreground">{t('writer.refUrl')}</Label>
                               <Input
                                 placeholder="https://youtube.com/"
                                 value={ref.url}
@@ -1478,15 +1478,15 @@ export default function Writer() {
                           >
                             <TabsList className="h-8 bg-background/50">
                               <TabsTrigger value="transcript" className="text-xs h-6 gap-1">
-                                <FileText className="h-3 w-3" /> Script / Transcript
+                                <FileText className="h-3 w-3" /> {t('writer.refScript')}
                               </TabsTrigger>
                               <TabsTrigger value="comments" className="text-xs h-6 gap-1">
-                                <MessageSquare className="h-3 w-3" /> Comments / Feedback
+                                <MessageSquare className="h-3 w-3" /> {t('writer.refComments')}
                               </TabsTrigger>
                             </TabsList>
                             <TabsContent value="transcript" className="mt-2">
                               <Textarea
-                                placeholder="Paste content here..."
+                                placeholder={t('writer.refScriptPlaceholder')}
                                 value={ref.transcript}
                                 onChange={(e) => updateFlopReference(ref.id, "transcript", e.target.value)}
                                 className="min-h-[80px] text-sm resize-none"
@@ -1494,7 +1494,7 @@ export default function Writer() {
                             </TabsContent>
                             <TabsContent value="comments" className="mt-2">
                               <Textarea
-                                placeholder="Paste comments or feedback here..."
+                                placeholder={t('writer.refCommentsPlaceholder')}
                                 value={ref.comments}
                                 onChange={(e) => updateFlopReference(ref.id, "comments", e.target.value)}
                                 className="min-h-[80px] text-sm resize-none"
@@ -1503,9 +1503,9 @@ export default function Writer() {
                           </Tabs>
 
                           <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">Description / Notes</Label>
+                            <Label className="text-xs text-muted-foreground">{t('writer.refNotes')}</Label>
                             <Textarea
-                              placeholder="e.g., Why this didn't work..."
+                              placeholder={t('writer.refNotesPlaceholder')}
                               value={ref.notes}
                               onChange={(e) => updateFlopReference(ref.id, "notes", e.target.value)}
                               className="min-h-[60px] text-sm resize-none"
@@ -1517,7 +1517,7 @@ export default function Writer() {
                         variant="outline"
                         size="sm"
                         onClick={addFlopReference}
-                        className="w-full gap-2 border-dashed border-red-500/50 text-red-500 hover:bg-red-500/5"
+                        className="w-full gap-2 border-dashed border-primary/50 text-primary hover:bg-primary/20 hover:border-primary"
                       >
                         <Plus className="h-4 w-4" />
                         {t('writer.addFlopRef')}

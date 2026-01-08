@@ -166,7 +166,7 @@ function normalizeExtractedDna(dna: ExtractedDNA): NormalizedDNA {
         // Legacy pattern fields
         corePatterns: dna.corePatterns || [],
         viralXFactors: dna.viralXFactors || [],
-        flopAvoidance: dna.flopAvoidance || [],
+        flopAvoidance: [],
         hook_examples: dna.hook_examples || [],
 
         // NEW fields - initialize with defaults if not present
@@ -191,7 +191,7 @@ function normalizeSavedDna(dna: DNA): NormalizedDNA {
         audiencePsychology: analysis.audiencePsychology || "",
 
         // NEW: voiceProfile (if available)
-        voiceProfile: analysis.voiceProfile,
+        //voiceProfile: analysis.voiceProfile,
 
         // Legacy fields for backward compatibility
         linguisticFingerprint: analysis.linguisticFingerprint || { personaRole: "", toneAnalysis: "", signatureKeywords: [] },
@@ -205,7 +205,7 @@ function normalizeSavedDna(dna: DNA): NormalizedDNA {
         objections: analysis.objections || [],
 
         // NEW: Consolidated patterns (if available)
-        patterns: analysis.patterns,
+        //patterns: analysis.patterns,
 
         // Legacy pattern fields
         corePatterns: analysis.corePatterns || dna.patterns || [],
@@ -214,14 +214,14 @@ function normalizeSavedDna(dna: DNA): NormalizedDNA {
         hook_examples: dna.hook_examples || [],
 
         // NEW fields - initialize with defaults if not present
-        persuasionFlow: analysis.persuasionFlow || {
-            framework: 'Custom',
-            proofSequence: [],
-            objectionHandling: { placement: '', mainObjection: '', counterTactic: '' },
-            logicalProgression: []
-        },
-        retentionHooks: analysis.retentionHooks || [],
-        transitions: analysis.transitions || [],
+        // persuasionFlow: analysis.persuasionFlow || {
+        //     framework: 'Custom',
+        //     proofSequence: [],
+        //     objectionHandling: { placement: '', mainObjection: '', counterTactic: '' },
+        //     logicalProgression: []
+        // },
+        // retentionHooks: analysis.retentionHooks || [],
+        // transitions: analysis.transitions || [],
 
         // Keep legacy fields for detail mode
         retention_tactics: dna.retention_tactics || [],
@@ -267,7 +267,7 @@ function denormalizeToExtractedDna(normalized: NormalizedDNA): ExtractedDNA {
         // Legacy pattern fields
         corePatterns: normalized.corePatterns,
         viralXFactors: normalized.viralXFactors,
-        flopAvoidance: normalized.flopAvoidance,
+        //flopAvoidance: normalized.flopAvoidance,
         hook_examples: normalized.hook_examples,
 
         // NEW fields
@@ -406,7 +406,7 @@ export function DNAView({
                     name: editedDna.name,
                     niche: editedDna.niche,
                     hook_examples: editedDna.hook_examples,
-                    patterns: editedDna.patterns,
+                    //patterns: editedDna.patterns,
                     retention_tactics: editedDna.retention_tactics,
                     x_factors: editedDna.x_factors,
                     analysis_data: analysisData,
@@ -533,7 +533,7 @@ export function DNAView({
                                     <Input
                                         value={viralUrl}
                                         onChange={(e) => setViralUrl(e.target.value)}
-                                        placeholder="Video URL (optional)"
+                                        placeholder={t('dnaLab.view.videoUrl')}
                                         className="bg-muted/50"
                                     />
                                     <Textarea
@@ -556,7 +556,7 @@ export function DNAView({
                                     <Input
                                         value={flopUrl}
                                         onChange={(e) => setFlopUrl(e.target.value)}
-                                        placeholder="Video URL (optional)"
+                                        placeholder={t('dnaLab.view.videoUrl')}
                                         className="bg-muted/50"
                                     />
                                     <Textarea
@@ -591,7 +591,7 @@ export function DNAView({
 
                             </Button>
                             <p className="text-xs text-muted-foreground">
-                                AI will learn from new content and refine your DNA patterns.
+                                {t('dnaLab.view.aiLearnHint')}
                             </p>
                         </div>
 
@@ -1333,246 +1333,246 @@ export function DNAView({
                                     <CollapsibleTrigger className="w-full">
                                         <div className="flex items-center justify-between">
                                             <Label className="text-xs uppercase text-blue-400 flex items-center gap-1.5 cursor-pointer">
-                                                <Brain className="h-3 w-3" /> {t('dna.view.persuasionFlow')}
+                                                <Brain className="h-3 w-3" /> {t('dnaLab.view.persuasionFlow')}
                                             </Label>
                                             <ChevronDown className="h-4 w-4 transition-transform" />
                                         </div>
                                     </CollapsibleTrigger>
 
-                                        <CollapsibleContent className="space-y-3 pt-2">
-                                            {/* Framework */}
-                                            <div className="space-y-1.5">
-                                                <Label className="text-xs text-muted-foreground">{t('dna.view.framework')}</Label>
-                                                <Input
-                                                    value={editedDna.persuasionFlow.framework}
-                                                    onChange={(e) => updateField("persuasionFlow.framework", e.target.value)}
-                                                    placeholder="PAS / BAB / Story-Based / Custom"
-                                                    className="bg-muted/50 text-sm"
-                                                />
-                                            </div>
+                                    <CollapsibleContent className="space-y-3 pt-2">
+                                        {/* Framework */}
+                                        {/* <div className="space-y-1.5">
+                                            <Label className="text-xs text-muted-foreground">{t('dnaLab.view.framework')}</Label>
+                                            <Input
+                                                value={editedDna.persuasionFlow.framework}
+                                                onChange={(e) => updateField("persuasionFlow.framework", e.target.value)}
+                                                placeholder={t('dnaLab.view.frameworkPlaceholder')}
+                                                className="bg-muted/50 text-sm"
+                                            />
+                                        </div> */}
 
-                                            {/* Logical Progression */}
-                                            <div className="space-y-1.5">
-                                                <Label className="text-xs text-muted-foreground">{t('dna.view.logicalProgression')}</Label>
-                                                <Textarea
-                                                    value={editedDna.persuasionFlow.logicalProgression?.join(' → ') || ''}
-                                                    onChange={(e) => {
-                                                        const steps = e.target.value.split('→').map(s => s.trim());
-                                                        updateField("persuasionFlow.logicalProgression", steps);
-                                                    }}
-                                                    placeholder="Step 1 → Step 2 → Step 3"
-                                                    className="min-h-[60px] bg-muted/50 resize-none text-sm"
-                                                />
-                                            </div>
+                                        {/* Logical Progression */}
+                                        {/* <div className="space-y-1.5">
+                                            <Label className="text-xs text-muted-foreground">{t('dnaLab.view.logicalProgression')}</Label>
+                                            <Textarea
+                                                value={editedDna.persuasionFlow.logicalProgression?.join(' → ') || ''}
+                                                onChange={(e) => {
+                                                    const steps = e.target.value.split('→').map(s => s.trim());
+                                                    updateField("persuasionFlow.logicalProgression", steps);
+                                                }}
+                                                placeholder={t('dnaLab.view.logicalProgressionPlaceholder')}
+                                                className="min-h-[60px] bg-muted/50 resize-none text-sm"
+                                            />
+                                        </div> */}
 
-                                            {/* Proof Sequence */}
-                                            <div className="space-y-1.5">
-                                                <Label className="text-xs text-muted-foreground">{t('dna.view.proofSequence')}</Label>
-                                                <Textarea
-                                                    value={editedDna.persuasionFlow.proofSequence?.join(', ') || ''}
-                                                    onChange={(e) => {
-                                                        const proofs = e.target.value.split(',').map(s => s.trim()) as any[];
-                                                        updateField("persuasionFlow.proofSequence", proofs);
-                                                    }}
-                                                    placeholder="personal-story, data, case-study, expert-quote, social-proof"
-                                                    className="min-h-[60px] bg-muted/50 resize-none text-sm"
-                                                />
-                                            </div>
+                                        {/* Proof Sequence */}
+                                        {/* <div className="space-y-1.5">
+                                            <Label className="text-xs text-muted-foreground">{t('dnaLab.view.proofSequence')}</Label>
+                                            <Textarea
+                                                value={editedDna.persuasionFlow.proofSequence?.join(', ') || ''}
+                                                onChange={(e) => {
+                                                    const proofs = e.target.value.split(',').map(s => s.trim()) as any[];
+                                                    updateField("persuasionFlow.proofSequence", proofs);
+                                                }}
+                                                placeholder={t('dnaLab.view.proofSequencePlaceholder')}
+                                                className="min-h-[60px] bg-muted/50 resize-none text-sm"
+                                            />
+                                        </div> */}
 
-                                            {/* Objection Handling */}
-                                            <div className="space-y-1.5">
-                                                <Label className="text-xs text-muted-foreground">{t('dna.view.mainObjection')}</Label>
-                                                <Input
-                                                    value={editedDna.persuasionFlow.objectionHandling?.mainObjection || ''}
-                                                    onChange={(e) => updateField("persuasionFlow.objectionHandling.mainObjection", e.target.value)}
-                                                    placeholder="Skepticism người xem sẽ có"
-                                                    className="bg-muted/50 text-sm"
-                                                />
-                                            </div>
+                                        {/* Objection Handling */}
+                                        {/* <div className="space-y-1.5">
+                                            <Label className="text-xs text-muted-foreground">{t('dnaLab.view.mainObjection')}</Label>
+                                            <Input
+                                                value={editedDna.persuasionFlow.objectionHandling?.mainObjection || ''}
+                                                onChange={(e) => updateField("persuasionFlow.objectionHandling.mainObjection", e.target.value)}
+                                                placeholder={t('dnaLab.view.mainObjectionPlaceholder')}
+                                                className="bg-muted/50 text-sm"
+                                            />
+                                        </div>
 
-                                            <div className="space-y-1.5">
-                                                <Label className="text-xs text-muted-foreground">{t('dna.view.counterTactic')}</Label>
-                                                <Textarea
-                                                    value={editedDna.persuasionFlow.objectionHandling?.counterTactic || ''}
-                                                    onChange={(e) => updateField("persuasionFlow.objectionHandling.counterTactic", e.target.value)}
-                                                    placeholder="Cách giải quyết objection"
-                                                    className="min-h-[60px] bg-muted/50 resize-none text-sm"
-                                                />
-                                            </div>
-                                        </CollapsibleContent>
-                                    </GlassCardContent>
-                                </Collapsible>
-                            </GlassCard>
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs text-muted-foreground">{t('dnaLab.view.counterTactic')}</Label>
+                                            <Textarea
+                                                value={editedDna.persuasionFlow.objectionHandling?.counterTactic || ''}
+                                                onChange={(e) => updateField("persuasionFlow.objectionHandling.counterTactic", e.target.value)}
+                                                placeholder={t('dnaLab.view.counterTacticPlaceholder')}
+                                                className="min-h-[60px] bg-muted/50 resize-none text-sm"
+                                            />
+                                        </div> */}
+                                    </CollapsibleContent>
+                                </GlassCardContent>
+                            </Collapsible>
+                        </GlassCard>
 
                         {/* ============================================ */}
                         {/* NEW FIELDS: Retention Hooks (Word Count Based) */}
                         {/* ============================================ */}
                         <GlassCard>
-                                <Collapsible>
-                                    <GlassCardContent className="p-4 space-y-3">
-                                        <CollapsibleTrigger className="w-full">
-                                            <div className="flex items-center justify-between">
-                                                <Label className="text-xs uppercase text-orange-400 flex items-center gap-1.5 cursor-pointer">
-                                                    <Zap className="h-3 w-3" /> {t('dna.view.retentionHooks')}
-                                                </Label>
-                                                <ChevronDown className="h-4 w-4 transition-transform" />
-                                            </div>
-                                        </CollapsibleTrigger>
+                            <Collapsible>
+                                <GlassCardContent className="p-4 space-y-3">
+                                    <CollapsibleTrigger className="w-full">
+                                        <div className="flex items-center justify-between">
+                                            <Label className="text-xs uppercase text-orange-400 flex items-center gap-1.5 cursor-pointer">
+                                                <Zap className="h-3 w-3" /> {t('dnaLab.view.retentionHooks')}
+                                            </Label>
+                                            <ChevronDown className="h-4 w-4 transition-transform" />
+                                        </div>
+                                    </CollapsibleTrigger>
 
-                                        <CollapsibleContent className="space-y-2 pt-2">
-                                            {editedDna.retentionHooks.map((hook, index) => (
-                                                <div key={index} className="p-3 bg-muted/30 rounded-lg space-y-2">
-                                                    <div className="grid grid-cols-2 gap-2">
-                                                        <div className="space-y-1">
-                                                            <Label className="text-xs text-muted-foreground">{t('dna.view.atWordCount')}</Label>
-                                                            <Input
-                                                                type="number"
-                                                                value={hook.atWordCount}
-                                                                onChange={(e) => {
-                                                                    const updated = [...editedDna.retentionHooks!];
-                                                                    updated[index] = { ...hook, atWordCount: parseInt(e.target.value) || 0 };
-                                                                    updateField("retentionHooks", updated);
-                                                                }}
-                                                                className="bg-background/50 text-sm h-8"
-                                                            />
-                                                        </div>
-                                                        <div className="space-y-1">
-                                                            <Label className="text-xs text-muted-foreground">{t('dna.view.technique')}</Label>
-                                                            <Input
-                                                                value={hook.technique}
-                                                                onChange={(e) => {
-                                                                    const updated = [...editedDna.retentionHooks!];
-                                                                    updated[index] = { ...hook, technique: e.target.value };
-                                                                    updateField("retentionHooks", updated);
-                                                                }}
-                                                                placeholder="pattern-interrupt, teaser, etc."
-                                                                className="bg-background/50 text-sm h-8"
-                                                            />
-                                                        </div>
-                                                    </div>
+                                    <CollapsibleContent className="space-y-2 pt-2">
+                                        {editedDna.retentionHooks.map((hook, index) => (
+                                            <div key={index} className="p-3 bg-muted/30 rounded-lg space-y-2">
+                                                <div className="grid grid-cols-2 gap-2">
                                                     <div className="space-y-1">
-                                                        <Label className="text-xs text-muted-foreground">{t('dna.view.example')}</Label>
-                                                        <Textarea
-                                                            value={hook.example}
+                                                        <Label className="text-xs text-muted-foreground">{t('dnaLab.view.atWordCount')}</Label>
+                                                        <Input
+                                                            type="number"
+                                                            value={hook.atWordCount}
                                                             onChange={(e) => {
                                                                 const updated = [...editedDna.retentionHooks!];
-                                                                updated[index] = { ...hook, example: e.target.value };
+                                                                updated[index] = { ...hook, atWordCount: parseInt(e.target.value) || 0 };
                                                                 updateField("retentionHooks", updated);
                                                             }}
-                                                            className="min-h-[50px] bg-background/50 resize-none text-sm"
+                                                            className="bg-background/50 text-sm h-8"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <Label className="text-xs text-muted-foreground">{t('dnaLab.view.technique')}</Label>
+                                                        <Input
+                                                            value={hook.technique}
+                                                            onChange={(e) => {
+                                                                const updated = [...editedDna.retentionHooks!];
+                                                                updated[index] = { ...hook, technique: e.target.value };
+                                                                updateField("retentionHooks", updated);
+                                                            }}
+                                                            placeholder={t('dnaLab.view.techniquePlaceholder')}
+                                                            className="bg-background/50 text-sm h-8"
                                                         />
                                                     </div>
                                                 </div>
-                                            ))}
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => {
-                                                    const updated = [...(editedDna.retentionHooks || [])];
-                                                    updated.push({ atWordCount: 200, technique: '', example: '' });
-                                                    updateField("retentionHooks", updated);
-                                                }}
-                                                className="w-full text-muted-foreground"
-                                            >
-                                                <Plus className="h-4 w-4 mr-2" />
-                                                {t('dna.view.addRetentionHook')}
-                                            </Button>
-                                        </CollapsibleContent>
-                                    </GlassCardContent>
-                                </Collapsible>
-                            </GlassCard>
+                                                <div className="space-y-1">
+                                                    <Label className="text-xs text-muted-foreground">{t('dnaLab.view.example')}</Label>
+                                                    <Textarea
+                                                        value={hook.example}
+                                                        onChange={(e) => {
+                                                            const updated = [...editedDna.retentionHooks!];
+                                                            updated[index] = { ...hook, example: e.target.value };
+                                                            updateField("retentionHooks", updated);
+                                                        }}
+                                                        className="min-h-[50px] bg-background/50 resize-none text-sm"
+                                                    />
+                                                </div>
+                                            </div>
+                                        ))}
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => {
+                                                const updated = [...(editedDna.retentionHooks || [])];
+                                                updated.push({ atWordCount: 200, technique: '', example: '' });
+                                                updateField("retentionHooks", updated);
+                                            }}
+                                            className="w-full text-muted-foreground"
+                                        >
+                                            <Plus className="h-4 w-4 mr-2" />
+                                            {t('dnaLab.view.addRetentionHook')}
+                                        </Button>
+                                    </CollapsibleContent>
+                                </GlassCardContent>
+                            </Collapsible>
+                        </GlassCard>
 
                         {/* ============================================ */}
                         {/* NEW FIELDS: Transitions */}
                         {/* ============================================ */}
                         <GlassCard>
-                                <Collapsible>
-                                    <GlassCardContent className="p-4 space-y-3">
-                                        <CollapsibleTrigger className="w-full">
-                                            <div className="flex items-center justify-between">
-                                                <Label className="text-xs uppercase text-cyan-400 flex items-center gap-1.5 cursor-pointer">
-                                                    <ChevronRight className="h-3 w-3" /> {t('dna.view.transitionFormulas')}
-                                                </Label>
-                                                <ChevronDown className="h-4 w-4 transition-transform" />
-                                            </div>
-                                        </CollapsibleTrigger>
+                            <Collapsible>
+                                <GlassCardContent className="p-4 space-y-3">
+                                    <CollapsibleTrigger className="w-full">
+                                        <div className="flex items-center justify-between">
+                                            <Label className="text-xs uppercase text-cyan-400 flex items-center gap-1.5 cursor-pointer">
+                                                <ChevronRight className="h-3 w-3" /> {t('dnaLab.view.transitionFormulas')}
+                                            </Label>
+                                            <ChevronDown className="h-4 w-4 transition-transform" />
+                                        </div>
+                                    </CollapsibleTrigger>
 
-                                        <CollapsibleContent className="space-y-2 pt-2">
-                                            {editedDna.transitions.map((transition, index) => (
-                                                <div key={index} className="p-3 bg-muted/30 rounded-lg space-y-2">
-                                                    <div className="grid grid-cols-2 gap-2">
-                                                        <div className="space-y-1">
-                                                            <Label className="text-xs text-muted-foreground">{t('dna.view.from')}</Label>
-                                                            <Input
-                                                                value={transition.from}
-                                                                onChange={(e) => {
-                                                                    const updated = [...editedDna.transitions!];
-                                                                    updated[index] = { ...transition, from: e.target.value };
-                                                                    updateField("transitions", updated);
-                                                                }}
-                                                                className="bg-background/50 text-sm h-8"
-                                                            />
-                                                        </div>
-                                                        <div className="space-y-1">
-                                                            <Label className="text-xs text-muted-foreground">{t('dna.view.to')}</Label>
-                                                            <Input
-                                                                value={transition.to}
-                                                                onChange={(e) => {
-                                                                    const updated = [...editedDna.transitions!];
-                                                                    updated[index] = { ...transition, to: e.target.value };
-                                                                    updateField("transitions", updated);
-                                                                }}
-                                                                className="bg-background/50 text-sm h-8"
-                                                            />
-                                                        </div>
-                                                    </div>
+                                    <CollapsibleContent className="space-y-2 pt-2">
+                                        {editedDna.transitions.map((transition, index) => (
+                                            <div key={index} className="p-3 bg-muted/30 rounded-lg space-y-2">
+                                                <div className="grid grid-cols-2 gap-2">
                                                     <div className="space-y-1">
-                                                        <Label className="text-xs text-muted-foreground">{t('dna.view.formula')}</Label>
-                                                        <Textarea
-                                                            value={transition.formula}
+                                                        <Label className="text-xs text-muted-foreground">{t('dnaLab.view.from')}</Label>
+                                                        <Input
+                                                            value={transition.from}
                                                             onChange={(e) => {
                                                                 const updated = [...editedDna.transitions!];
-                                                                updated[index] = { ...transition, formula: e.target.value };
+                                                                updated[index] = { ...transition, from: e.target.value };
                                                                 updateField("transitions", updated);
                                                             }}
-                                                            placeholder="Abstract transition pattern"
+                                                            className="bg-background/50 text-sm h-8"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <Label className="text-xs text-muted-foreground">{t('dnaLab.view.to')}</Label>
+                                                        <Input
+                                                            value={transition.to}
+                                                            onChange={(e) => {
+                                                                const updated = [...editedDna.transitions!];
+                                                                updated[index] = { ...transition, to: e.target.value };
+                                                                updateField("transitions", updated);
+                                                            }}
+                                                            className="bg-background/50 text-sm h-8"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <Label className="text-xs text-muted-foreground">{t('dnaLab.view.formula')}</Label>
+                                                    <Textarea
+                                                        value={transition.formula}
+                                                        onChange={(e) => {
+                                                            const updated = [...editedDna.transitions!];
+                                                            updated[index] = { ...transition, formula: e.target.value };
+                                                            updateField("transitions", updated);
+                                                        }}
+                                                        placeholder={t('dnaLab.view.formulaPlaceholder')}
+                                                        className="min-h-[50px] bg-background/50 resize-none text-sm"
+                                                    />
+                                                </div>
+                                                {transition.example !== undefined && (
+                                                    <div className="space-y-1">
+                                                        <Label className="text-xs text-muted-foreground">{t('dnaLab.view.exampleOptional')}</Label>
+                                                        <Textarea
+                                                            value={transition.example || ''}
+                                                            onChange={(e) => {
+                                                                const updated = [...editedDna.transitions!];
+                                                                updated[index] = { ...transition, example: e.target.value };
+                                                                updateField("transitions", updated);
+                                                            }}
+                                                            placeholder={t('dnaLab.view.examplePlaceholder')}
                                                             className="min-h-[50px] bg-background/50 resize-none text-sm"
                                                         />
                                                     </div>
-                                                    {transition.example !== undefined && (
-                                                        <div className="space-y-1">
-                                                            <Label className="text-xs text-muted-foreground">Example (optional)</Label>
-                                                            <Textarea
-                                                                value={transition.example || ''}
-                                                                onChange={(e) => {
-                                                                    const updated = [...editedDna.transitions!];
-                                                                    updated[index] = { ...transition, example: e.target.value };
-                                                                    updateField("transitions", updated);
-                                                                }}
-                                                                placeholder="Concrete example"
-                                                                className="min-h-[50px] bg-background/50 resize-none text-sm"
-                                                            />
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ))}
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => {
-                                                    const updated = [...(editedDna.transitions || [])];
-                                                    updated.push({ from: '', to: '', formula: '', example: '' });
-                                                    updateField("transitions", updated);
-                                                }}
-                                                className="w-full text-muted-foreground"
-                                            >
-                                                <Plus className="h-4 w-4 mr-2" />
-                                                {t('dna.view.addTransitionFormula')}
-                                            </Button>
-                                        </CollapsibleContent>
-                                    </GlassCardContent>
-                                </Collapsible>
-                            </GlassCard>
+                                                )}
+                                            </div>
+                                        ))}
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => {
+                                                const updated = [...(editedDna.transitions || [])];
+                                                updated.push({ from: '', to: '', formula: '', example: '' });
+                                                updateField("transitions", updated);
+                                            }}
+                                            className="w-full text-muted-foreground"
+                                        >
+                                            <Plus className="h-4 w-4 mr-2" />
+                                            {t('dnaLab.view.addTransitionFormula')}
+                                        </Button>
+                                    </CollapsibleContent>
+                                </GlassCardContent>
+                            </Collapsible>
+                        </GlassCard>
 
                         {/* Source Info - detail mode only */}
                         {!isPreview && editedDna.source_url && (
