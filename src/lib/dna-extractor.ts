@@ -537,46 +537,32 @@ export interface LearningHistoryEntry {
 // STRUCTURE VALIDATION - Enforce reasonable section word counts
 // ============================================================================
 
-/**
- * Validate and fix structural skeleton word counts
- * Enforces limits defined in DNA extraction prompt
- */
-const validateAndFixSkeleton = (skeleton: any[]): any[] => {
+const validateAndFixSkeleton = (skeleton: any[], targetWordCount: number = 0): any[] => {
   if (!skeleton || skeleton.length === 0) return skeleton;
 
-  const LIMITS: Record<string, { min: number; max: number }> = {
-    hook: { min: 30, max: 80 },
-    opening: { min: 60, max: 150 },
-    main: { min: 120, max: 250 },
-    transition: { min: 40, max: 100 },
-    cta: { min: 25, max: 60 }
-  };
+  // 1. Calculate current structure total
+  const currentTotal = skeleton.reduce((sum, s) => sum + (s.wordCount || 0), 0);
 
-  // Detect section type based on title keywords
-  const detectType = (title: string): keyof typeof LIMITS => {
-    const lower = title.toLowerCase();
-    if (lower.includes('hook') || lower.includes('pattern interrupt') || lower.includes('attention')) return 'hook';
-    if (lower.includes('cta') || lower.includes('call to action') || lower.includes('conclusion')) return 'cta';
-    if (lower.includes('context') || lower.includes('setup') || lower.includes('intro')) return 'opening';
-    if (lower.includes('transition') || lower.includes('bridge')) return 'transition';
-    return 'main'; // Default to main content
-  };
+  // 2. If we have a target and current is valid but mismatched, SCALE PROPORTIONALLY
+  if (targetWordCount > 0 && currentTotal > 0) {
+    const scaleFactor = targetWordCount / currentTotal;
 
-  return skeleton.map((section, idx) => {
-    const type = detectType(section.title);
-    const limits = LIMITS[type];
-    const wordCount = section.wordCount || 0;
-
-    // Check if out of bounds
-    if (wordCount < limits.min || wordCount > limits.max) {
-      console.warn(`[DNA Validation] Section "${section.title}" has ${wordCount} words, expected ${limits.min}-${limits.max}. Adjusting...`);
-      // Clamp to limits
-      const adjusted = Math.max(limits.min, Math.min(limits.max, wordCount));
-      return { ...section, wordCount: adjusted };
+    // Only scale if there's a significant deviation (> 10%)
+    if (Math.abs(scaleFactor - 1) > 0.1) {
+      console.log(`[DNA Validation] Scaling structure from ${currentTotal} to ${targetWordCount} (x${scaleFactor.toFixed(2)})`);
+      return skeleton.map(section => ({
+        ...section,
+        wordCount: Math.round((section.wordCount || 0) * scaleFactor)
+      }));
     }
+  }
 
-    return section;
-  });
+  // 3. Fallback: If no target or 0 sum, apply generous sanity bounds (not strict clamping)
+  const MIN_WORDS = 30; // Minimum for any section
+  return skeleton.map(section => ({
+    ...section,
+    wordCount: Math.max(section.wordCount || MIN_WORDS, MIN_WORDS)
+  }));
 };
 
 // ============================================================================
@@ -596,7 +582,7 @@ const mergeBatchResults = (batchResults: any[], avgWordCount: number): any => {
     const result = { ...batchResults[0], targetWordCount: avgWordCount };
     // Validate skeleton
     if (result.structuralSkeleton) {
-      result.structuralSkeleton = validateAndFixSkeleton(result.structuralSkeleton);
+      result.structuralSkeleton = validateAndFixSkeleton(result.structuralSkeleton, avgWordCount);
     }
     return result;
   }
@@ -711,7 +697,7 @@ const mergeBatchResults = (batchResults: any[], avgWordCount: number): any => {
       .sort((a, b) => b.length - a.length)[0] || [],
 
     // Structural Skeleton - merge intelligently and validate
-    structuralSkeleton: validateAndFixSkeleton(mergeStructuralSkeletons(allStructuralSkeletons)),
+    structuralSkeleton: validateAndFixSkeleton(mergeStructuralSkeletons(allStructuralSkeletons), avgWordCount),
 
     // Array merging - prioritize patterns appearing in multiple batches
     corePatterns: mergeArraysByFrequency(allCorePatterns, 0.5), // 50%+ batches

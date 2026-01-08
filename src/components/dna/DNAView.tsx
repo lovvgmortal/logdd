@@ -1033,7 +1033,7 @@ export function DNAView({
                                     </Label>
 
                                     <div className="space-y-2">
-                                        {editedDna.highDopamine.map((item, index) => (
+                                        {(editedDna.highDopamine || []).map((item, index) => (
                                             <div key={index} className="flex gap-2">
                                                 <Textarea
                                                     value={item}
@@ -1072,7 +1072,7 @@ export function DNAView({
                                     </Label>
 
                                     <div className="space-y-2">
-                                        {editedDna.confusionPoints.map((item, index) => (
+                                        {(editedDna.confusionPoints || []).map((item, index) => (
                                             <div key={index} className="flex gap-2">
                                                 <Textarea
                                                     value={item}
@@ -1111,7 +1111,7 @@ export function DNAView({
                                     </Label>
 
                                     <div className="space-y-2">
-                                        {editedDna.objections.map((item, index) => (
+                                        {(editedDna.objections || []).map((item, index) => (
                                             <div key={index} className="flex gap-2">
                                                 <Textarea
                                                     value={item}
@@ -1153,7 +1153,7 @@ export function DNAView({
                                     </Label>
 
                                     <div className="space-y-2">
-                                        {editedDna.corePatterns.map((item, index) => (
+                                        {(editedDna.corePatterns || []).map((item, index) => (
                                             <div key={index} className="flex gap-2">
                                                 <Textarea
                                                     value={item}
@@ -1192,7 +1192,7 @@ export function DNAView({
                                     </Label>
 
                                     <div className="space-y-2">
-                                        {editedDna.viralXFactors.map((item, index) => (
+                                        {(editedDna.viralXFactors || []).map((item, index) => (
                                             <div key={index} className="flex gap-2">
                                                 <Textarea
                                                     value={item}
@@ -1231,7 +1231,7 @@ export function DNAView({
                                     </Label>
 
                                     <div className="space-y-2">
-                                        {editedDna.flopAvoidance.map((item, index) => (
+                                        {(editedDna.flopAvoidance || []).map((item, index) => (
                                             <div key={index} className="flex gap-2">
                                                 <Textarea
                                                     value={item}
@@ -1341,50 +1341,52 @@ export function DNAView({
 
                                     <CollapsibleContent className="space-y-3 pt-2">
                                         {/* Framework */}
-                                        {/* <div className="space-y-1.5">
+                                        {/* Framework */}
+                                        {/*
+                                        <div className="space-y-1.5">
                                             <Label className="text-xs text-muted-foreground">{t('dnaLab.view.framework')}</Label>
                                             <Input
-                                                value={editedDna.persuasionFlow.framework}
+                                                value={editedDna.persuasionFlow?.framework || ''}
                                                 onChange={(e) => updateField("persuasionFlow.framework", e.target.value)}
                                                 placeholder={t('dnaLab.view.frameworkPlaceholder')}
                                                 className="bg-muted/50 text-sm"
                                             />
-                                        </div> */}
+                                        </div>
 
                                         {/* Logical Progression */}
-                                        {/* <div className="space-y-1.5">
+                                        <div className="space-y-1.5">
                                             <Label className="text-xs text-muted-foreground">{t('dnaLab.view.logicalProgression')}</Label>
                                             <Textarea
-                                                value={editedDna.persuasionFlow.logicalProgression?.join(' → ') || ''}
+                                                value={editedDna.persuasionFlow?.logicalProgression?.join(' → ') || ''}
                                                 onChange={(e) => {
                                                     const steps = e.target.value.split('→').map(s => s.trim());
-                                                    updateField("persuasionFlow.logicalProgression", steps);
+                                                    //updateField("persuasionFlow.logicalProgression", steps);
                                                 }}
                                                 placeholder={t('dnaLab.view.logicalProgressionPlaceholder')}
                                                 className="min-h-[60px] bg-muted/50 resize-none text-sm"
                                             />
-                                        </div> */}
+                                        </div>
 
                                         {/* Proof Sequence */}
-                                        {/* <div className="space-y-1.5">
+                                        <div className="space-y-1.5">
                                             <Label className="text-xs text-muted-foreground">{t('dnaLab.view.proofSequence')}</Label>
                                             <Textarea
-                                                value={editedDna.persuasionFlow.proofSequence?.join(', ') || ''}
+                                                value={editedDna.persuasionFlow?.proofSequence?.join(', ') || ''}
                                                 onChange={(e) => {
                                                     const proofs = e.target.value.split(',').map(s => s.trim()) as any[];
-                                                    updateField("persuasionFlow.proofSequence", proofs);
+                                                    //updateField("persuasionFlow.proofSequence", proofs);
                                                 }}
                                                 placeholder={t('dnaLab.view.proofSequencePlaceholder')}
                                                 className="min-h-[60px] bg-muted/50 resize-none text-sm"
                                             />
-                                        </div> */}
+                                        </div>
 
                                         {/* Objection Handling */}
-                                        {/* <div className="space-y-1.5">
+                                        <div className="space-y-1.5">
                                             <Label className="text-xs text-muted-foreground">{t('dnaLab.view.mainObjection')}</Label>
                                             <Input
-                                                value={editedDna.persuasionFlow.objectionHandling?.mainObjection || ''}
-                                                onChange={(e) => updateField("persuasionFlow.objectionHandling.mainObjection", e.target.value)}
+                                                value={editedDna.persuasionFlow?.objectionHandling?.mainObjection || ''}
+                                                // onChange={(e) => updateField("persuasionFlow.objectionHandling.mainObjection", e.target.value)}
                                                 placeholder={t('dnaLab.view.mainObjectionPlaceholder')}
                                                 className="bg-muted/50 text-sm"
                                             />
@@ -1393,12 +1395,12 @@ export function DNAView({
                                         <div className="space-y-1.5">
                                             <Label className="text-xs text-muted-foreground">{t('dnaLab.view.counterTactic')}</Label>
                                             <Textarea
-                                                value={editedDna.persuasionFlow.objectionHandling?.counterTactic || ''}
-                                                onChange={(e) => updateField("persuasionFlow.objectionHandling.counterTactic", e.target.value)}
+                                                value={editedDna.persuasionFlow?.objectionHandling?.counterTactic || ''}
+                                                //onChange={(e) => updateField("persuasionFlow.objectionHandling.counterTactic", e.target.value)}
                                                 placeholder={t('dnaLab.view.counterTacticPlaceholder')}
                                                 className="min-h-[60px] bg-muted/50 resize-none text-sm"
                                             />
-                                        </div> */}
+                                        </div>
                                     </CollapsibleContent>
                                 </GlassCardContent>
                             </Collapsible>
@@ -1420,7 +1422,7 @@ export function DNAView({
                                     </CollapsibleTrigger>
 
                                     <CollapsibleContent className="space-y-2 pt-2">
-                                        {editedDna.retentionHooks.map((hook, index) => (
+                                        {(editedDna.retentionHooks || []).map((hook, index) => (
                                             <div key={index} className="p-3 bg-muted/30 rounded-lg space-y-2">
                                                 <div className="grid grid-cols-2 gap-2">
                                                     <div className="space-y-1">
@@ -1498,7 +1500,7 @@ export function DNAView({
                                     </CollapsibleTrigger>
 
                                     <CollapsibleContent className="space-y-2 pt-2">
-                                        {editedDna.transitions.map((transition, index) => (
+                                        {(editedDna.transitions || []).map((transition, index) => (
                                             <div key={index} className="p-3 bg-muted/30 rounded-lg space-y-2">
                                                 <div className="grid grid-cols-2 gap-2">
                                                     <div className="space-y-1">

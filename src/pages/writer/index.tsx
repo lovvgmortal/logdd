@@ -1401,7 +1401,7 @@ export default function Writer() {
                         variant="outline"
                         size="sm"
                         onClick={addViralReference}
-                        className="w-full gap-2 border-dashed border-primary/50 text-primary hover:bg-primary/20 hover:border-primary"
+                        className="w-full gap-2 border-dashed border-primary/50 text-primary hover:bg-primary/40 hover:border-primary"
                       >
                         <Plus className="h-4 w-4" />
                         {t('writer.addViralRef')}
@@ -1517,7 +1517,7 @@ export default function Writer() {
                         variant="outline"
                         size="sm"
                         onClick={addFlopReference}
-                        className="w-full gap-2 border-dashed border-primary/50 text-primary hover:bg-primary/20 hover:border-primary"
+                        className="w-full gap-2 border-dashed border-primary/50 text-primary hover:bg-primary/40 hover:border-primary"
                       >
                         <Plus className="h-4 w-4" />
                         {t('writer.addFlopRef')}
